@@ -16,7 +16,6 @@ fn main() -> eframe::Result {
     )
 }
 
-#[derive(Default)]
 struct SearchApp {
     search_text: String,
     last_search_text: String,
@@ -77,7 +76,7 @@ impl SearchApp {
             } else {
                 println!("Opening item: {}", item);
             }
-            
+
             if !self.search_text.is_empty() && !self.recent_queries.contains(&self.search_text) {
                 self.recent_queries.insert(0, self.search_text.clone());
                 if self.recent_queries.len() > 10 {

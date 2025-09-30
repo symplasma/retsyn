@@ -26,6 +26,25 @@
 - Allow actions on selected matches (default is open)
 - Advanced queries based on field specifiers
 
+## Common Data
+
+All search entries should have at least the following fields:
+
+- Title/Name
+- Description/Summary
+- Kind
+- Source: The indexer that found this file
+- Path on disk
+- Url
+
+### Additional Data
+
+- Hashes?
+  - Cryptographic
+  - Fuzzy/perceptual
+  - CTPH: [ffuzzy](https://lib.rs/crates/ffuzzy) ssdeep Context Triggered Piecewise Hashes
+- Vector? If we add embeddings and vector search.
+
 ## Categories
 
 - Browser

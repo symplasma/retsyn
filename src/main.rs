@@ -180,6 +180,8 @@ impl eframe::App for SearchApp {
 
                 ui.add_space(10.0);
 
+                let mut clicked_item: Option<(usize, bool)> = None;
+
                 egui::ScrollArea::vertical()
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
@@ -207,13 +209,17 @@ impl eframe::App for SearchApp {
 
                                 if response.clicked() {
                                     let shift_held = ui.input(|i| i.modifiers.shift);
-                                    self.open_item(idx, shift_held);
+                                    clicked_item = Some((idx, shift_held));
                                 }
                             }
 
                             self.scroll_to_selected = false;
                         }
                     });
+
+                if let Some((idx, shift_held)) = clicked_item {
+                    self.open_item(idx, shift_held);
+                }
             });
         });
     }

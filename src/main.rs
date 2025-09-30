@@ -25,6 +25,7 @@ struct SearchApp {
     debounce_duration: Duration,
     recent_queries: Vec<String>,
     scroll_to_selected: bool,
+    dark_mode: bool,
 }
 
 impl SearchApp {
@@ -42,6 +43,7 @@ impl SearchApp {
                 "Recent query 3".to_string(),
             ],
             scroll_to_selected: false,
+            dark_mode: false,
         }
     }
 
@@ -143,6 +145,13 @@ impl Default for SearchApp {
 
 impl eframe::App for SearchApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Set theme based on dark_mode toggle
+        if self.dark_mode {
+            ctx.set_visuals(egui::Visuals::dark());
+        } else {
+            ctx.set_visuals(egui::Visuals::light());
+        }
+
         if ctx.input(|i| i.key_pressed(egui::Key::Q) && i.modifiers.ctrl)
             || ctx.input(|i| i.key_pressed(egui::Key::W) && i.modifiers.ctrl)
         {

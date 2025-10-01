@@ -58,6 +58,10 @@ All search entries should have at least the following fields:
   - transcripts for videos
   - auto-generated descriptions if those can be obtained
 - Email
+- Todos
+- Calendars
+- Photos
+- Contacts
 - Music
 - Git Repos
 - Projects
@@ -72,3 +76,10 @@ All search entries should have at least the following fields:
   - SMS
   - etc.
 - KeePassXC Metadata?
+- Software
+  - Desktop files
+  - Package manger entries
+    - Nixpkgs
+    - Crates
+    - NPM
+    - etc.

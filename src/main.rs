@@ -135,38 +135,8 @@ impl SearchApp {
             }
         }
     }
-}
 
-impl Default for SearchApp {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl eframe::App for SearchApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Set theme based on dark_mode toggle
-        if self.dark_mode {
-            ctx.set_visuals(egui::Visuals::dark());
-        } else {
-            ctx.set_visuals(egui::Visuals::light());
-        }
-
-        handle_key_events(ctx);
-
-        self.handle_navigation(ctx);
-
-        if let Some(last_time) = self.last_input_time {
-            if last_time.elapsed() >= self.debounce_duration
-                && self.search_text != self.last_search_text
-            {
-                self.update_search();
-                self.last_input_time = None;
-            } else {
-                ctx.request_repaint();
-            }
-        }
-
+    fn draw_main_ui(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical(|ui| {
                 ui.add_space(10.0);
@@ -227,6 +197,40 @@ impl eframe::App for SearchApp {
                 }
             });
         });
+    }
+}
+
+impl Default for SearchApp {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl eframe::App for SearchApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Set theme based on dark_mode toggle
+        if self.dark_mode {
+            ctx.set_visuals(egui::Visuals::dark());
+        } else {
+            ctx.set_visuals(egui::Visuals::light());
+        }
+
+        handle_key_events(ctx);
+
+        self.handle_navigation(ctx);
+
+        if let Some(last_time) = self.last_input_time {
+            if last_time.elapsed() >= self.debounce_duration
+                && self.search_text != self.last_search_text
+            {
+                self.update_search();
+                self.last_input_time = None;
+            } else {
+                ctx.request_repaint();
+            }
+        }
+
+        self.draw_main_ui(ctx);
     }
 }
 

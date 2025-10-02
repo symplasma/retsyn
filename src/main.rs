@@ -152,11 +152,7 @@ impl eframe::App for SearchApp {
             ctx.set_visuals(egui::Visuals::light());
         }
 
-        if ctx.input(|i| i.key_pressed(egui::Key::Q) && i.modifiers.ctrl)
-            || ctx.input(|i| i.key_pressed(egui::Key::W) && i.modifiers.ctrl)
-        {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-        }
+        handle_key_events(ctx);
 
         self.handle_navigation(ctx);
 
@@ -231,5 +227,16 @@ impl eframe::App for SearchApp {
                 }
             });
         });
+    }
+}
+
+fn handle_key_events(ctx: &egui::Context) {
+    if ctx.input(|i| i.key_pressed(egui::Key::Escape))
+        || ctx.input(|i| i.key_pressed(egui::Key::Q) && i.modifiers.ctrl)
+        || ctx.input(|i| i.key_pressed(egui::Key::W) && i.modifiers.ctrl)
+        || ctx.input(|i| i.key_pressed(egui::Key::C) && i.modifiers.ctrl)
+        || ctx.input(|i| i.key_pressed(egui::Key::D) && i.modifiers.ctrl)
+    {
+        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
     }
 }

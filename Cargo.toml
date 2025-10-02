@@ -1,7 +1,11 @@
 [package]
-name = "search-app"
+name = "retsyn"
 version = "0.1.0"
 edition = "2024"
+
+[[bin]]
+name = "retsyn"
+path = "src/main.rs"
 
 [dependencies]
 eframe = { version = "0.32", default-features = false, features = [

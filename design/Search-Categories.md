@@ -45,37 +45,40 @@ All search entries should have at least the following fields:
   - CTPH: [ffuzzy](https://lib.rs/crates/ffuzzy) ssdeep Context Triggered Piecewise Hashes
 - Vector? If we add embeddings and vector search.
 
-## Categories
+## Sources
 
+The list of items that we'll index. This has some overlap with search categories or file types.
+
+These items are listed in roughly the order in which we plan to implement them.
+
+- Markdown files
+- Archived Webpages
+- Git Repos
+- Contacts
 - Browser
   - bookmarks
   - history
   - open tabs
   - tab exports and archives (Saved Links)
-- Archived Webpages
-- Markdown files
+- Music
 - Archived videos
   - transcripts for videos
   - auto-generated descriptions if those can be obtained
-- Email
-- Todos
-- Calendars
-- Photos
-- Contacts
-- Music
-- Git Repos
 - Projects
   - project names
   - readme files
   - project documentation
   - source code?
+- Todos
+- Calendars
+- Photos
+- Email
 - Chat history
   - Keybase
   - Signal
   - SimpleX
   - SMS
   - etc.
-- KeePassXC Metadata?
 - Software
   - Desktop files
   - Package manger entries
@@ -83,3 +86,4 @@ All search entries should have at least the following fields:
     - Crates
     - NPM
     - etc.
+- KeePassXC Metadata?

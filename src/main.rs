@@ -47,6 +47,12 @@ impl SearchApp {
         }
     }
 
+    fn clear_search(&mut self) {
+        self.search_text.clear();
+        self.matched_items.clear();
+        self.selected_index = None;
+    }
+
     fn update_search(&mut self) {
         if self.search_text.is_empty() {
             self.matched_items.clear();
@@ -198,6 +204,32 @@ impl SearchApp {
             });
         });
     }
+
+    fn handle_key_events(&mut self, ctx: &egui::Context) {
+        if ctx.input(|i| i.key_pressed(egui::Key::U) && i.modifiers.ctrl)
+            && !self.search_text.is_empty()
+        {
+            self.clear_search();
+            return;
+        }
+
+        if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            if self.search_text.is_empty() {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            } else {
+                self.clear_search();
+            }
+            return;
+        }
+
+        if ctx.input(|i| i.key_pressed(egui::Key::Q) && i.modifiers.ctrl)
+            || ctx.input(|i| i.key_pressed(egui::Key::W) && i.modifiers.ctrl)
+            || ctx.input(|i| i.key_pressed(egui::Key::C) && i.modifiers.ctrl)
+            || ctx.input(|i| i.key_pressed(egui::Key::D) && i.modifiers.ctrl)
+        {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+    }
 }
 
 impl Default for SearchApp {
@@ -215,7 +247,7 @@ impl eframe::App for SearchApp {
             ctx.set_visuals(egui::Visuals::light());
         }
 
-        handle_key_events(ctx);
+        self.handle_key_events(ctx);
 
         self.handle_navigation(ctx);
 
@@ -231,16 +263,5 @@ impl eframe::App for SearchApp {
         }
 
         self.draw_main_ui(ctx);
-    }
-}
-
-fn handle_key_events(ctx: &egui::Context) {
-    if ctx.input(|i| i.key_pressed(egui::Key::Escape))
-        || ctx.input(|i| i.key_pressed(egui::Key::Q) && i.modifiers.ctrl)
-        || ctx.input(|i| i.key_pressed(egui::Key::W) && i.modifiers.ctrl)
-        || ctx.input(|i| i.key_pressed(egui::Key::C) && i.modifiers.ctrl)
-        || ctx.input(|i| i.key_pressed(egui::Key::D) && i.modifiers.ctrl)
-    {
-        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
     }
 }

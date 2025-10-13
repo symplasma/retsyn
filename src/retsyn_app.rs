@@ -1,6 +1,18 @@
-use std::time::{Duration, Instant};
+use std::{
+    process::exit,
+    time::{Duration, Instant},
+};
+
+use confique::{
+    Config,
+    toml::{self, FormatOptions},
+};
+use directories::ProjectDirs;
+
+use crate::{config::Conf, fulltext_index::FulltextIndex};
 
 pub struct RetsynApp {
+    config: Conf,
     search_text: String,
     last_search_text: String,
     matched_items: Vec<String>,
@@ -10,11 +22,29 @@ pub struct RetsynApp {
     recent_queries: Vec<String>,
     scroll_to_selected: bool,
     dark_mode: bool,
+    fulltext_index: FulltextIndex,
 }
 
 impl RetsynApp {
     fn new() -> Self {
+        let dirs: ProjectDirs = ProjectDirs::from("org", "symplasma", "retsyn")
+            .expect("should be able to create project dir");
+        let config_file = dirs.config_dir().to_path_buf().join("retsyn.toml");
+
+        let config = match Conf::builder().env().file(config_file).load() {
+            Ok(config) => config,
+            Err(_) => {
+                // TODO make this something that can be invoked via a CLI option
+                // create the config template
+                println!("{}", toml::template::<Conf>(FormatOptions::default()));
+                exit(0)
+            }
+        };
+
+        let fulltext_index = FulltextIndex::new(&config);
+
         Self {
+            config,
             search_text: String::new(),
             last_search_text: String::new(),
             matched_items: Vec::new(),
@@ -28,6 +58,7 @@ impl RetsynApp {
             ],
             scroll_to_selected: false,
             dark_mode: false,
+            fulltext_index,
         }
     }
 

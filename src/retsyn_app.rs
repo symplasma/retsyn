@@ -1,5 +1,6 @@
 use std::{
     process::exit,
+    sync::LazyLock,
     time::{Duration, Instant},
 };
 
@@ -8,8 +9,13 @@ use confique::{
     toml::{self, FormatOptions},
 };
 use directories::ProjectDirs;
+use tantivy::TantivyError;
 
 use crate::{config::Conf, fulltext_index::FulltextIndex};
+
+pub(crate) static PROJECT_DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
+    ProjectDirs::from("org", "symplasma", "retsyn").expect("should be able to create project dir")
+});
 
 pub struct RetsynApp {
     config: Conf,
@@ -26,10 +32,8 @@ pub struct RetsynApp {
 }
 
 impl RetsynApp {
-    fn new() -> Self {
-        let dirs: ProjectDirs = ProjectDirs::from("org", "symplasma", "retsyn")
-            .expect("should be able to create project dir");
-        let config_file = dirs.config_dir().to_path_buf().join("retsyn.toml");
+    fn new() -> Result<Self, TantivyError> {
+        let config_file = PROJECT_DIRS.config_dir().to_path_buf().join("retsyn.toml");
 
         let config = match Conf::builder().env().file(config_file).load() {
             Ok(config) => config,
@@ -41,11 +45,11 @@ impl RetsynApp {
             }
         };
 
-        let fulltext_index = FulltextIndex::new(&config);
+        let fulltext_index = FulltextIndex::new(&config)?;
         // TODO need to move this into a separate thread
-        fulltext_index.update();
+        fulltext_index.update()?;
 
-        Self {
+        Ok(Self {
             config,
             search_text: String::new(),
             last_search_text: String::new(),
@@ -61,7 +65,7 @@ impl RetsynApp {
             scroll_to_selected: false,
             dark_mode: false,
             fulltext_index,
-        }
+        })
     }
 
     fn clear_search(&mut self) {
@@ -251,7 +255,7 @@ impl RetsynApp {
 
 impl Default for RetsynApp {
     fn default() -> Self {
-        Self::new()
+        Self::new().expect("should be able to make a new RetsynApp")
     }
 }
 

@@ -10,3 +10,29 @@ It's being rewritten for two primary reasons:
 
 1. Composability: Symplasma is a suite of reference software for an alternate knowledge management, sharing and preservation protocol. In that spirit we're trying to break up the early monolithic code into a set of separate crates that can be used as independent programs or integrated into other software as libraries.
 2. Simplicity: Educe was written when I was just getting started with Rust. As such I was still fighting the borrow checker and trying to understand traits. Looking back at the original code it now looks overly complicated, even though it did work. Also [Tantivy](https://github.com/quickwit-oss/tantivy) has been updated and works a bit differently now so we need to re-integrate that.
+
+## Features and TODOs
+
+This is a list of features. Implemented features are checked, the rest are planned.
+
+- [ ] Ensure that invalid queries display errors gracefully
+- [ ] Allow clearing of search indexes via a CLI flag
+- [ ] Get item opening working
+- [ ] Allow revealing of items
+- [ ] Show all items that fit within the current window
+- [ ] Show snippets for items
+- [ ] Record and show recent queries
+- [ ] Allow updates for items in the full text index
+- [ ] Allow incremental updates to the index
+- [ ] Ensure that search debounce is working correctly
+- [ ] Allow toggling between fuzzy and exact search
+- [ ] Allow indexing in another thread
+- [ ] Add the link database
+- [ ] Add phonetic search
+- [ ] Add vector search based on embeddings
+- [ ] Merge/deduplicate multiple hits on the same item from different indexes
+- [ ] Add scoping based on item source
+- [ ] Ensure that queries allow for powerful searches
+- [ ] Add item ranking for all sources
+- [ ] Add custom item ranking algorithm
+- [ ] Add more indexing sources and types

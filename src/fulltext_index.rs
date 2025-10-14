@@ -1,20 +1,24 @@
 use ignore::Walk;
 use std::{fs::create_dir_all, path::PathBuf};
 use tantivy::{
-    Index, TantivyError,
+    Index, IndexReader, ReloadPolicy, TantivyDocument, TantivyError,
+    collector::TopDocs,
     directory::{ManagedDirectory, MmapDirectory},
     doc,
+    query::QueryParser,
     schema::{STORED, Schema, TEXT},
 };
 
 use crate::{
     config::{Conf, PathList},
     retsyn_app::PROJECT_DIRS,
+    search_result::SearchResult,
 };
 
 pub(crate) struct FulltextIndex {
     markdown_files: PathList,
     index: Index,
+    reader: IndexReader,
 }
 
 impl FulltextIndex {
@@ -41,6 +45,12 @@ impl FulltextIndex {
         let index = Index::open_or_create(index_dir, schema)
             .expect("should be able to open or create the index");
 
+        // create the reader here
+        let reader = index
+            .reader_builder()
+            .reload_policy(ReloadPolicy::OnCommitWithDelay)
+            .try_into()?;
+
         Ok(Self {
             markdown_files: config
                 .markdown_files
@@ -49,6 +59,7 @@ impl FulltextIndex {
                 .map(|p| PathBuf::from(shellexpand::tilde(&p.to_string_lossy()).into_owned()))
                 .collect(),
             index,
+            reader,
         })
     }
 
@@ -82,5 +93,29 @@ impl FulltextIndex {
         index_writer.commit()?;
 
         Ok(())
+    }
+
+    pub(crate) fn search(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<SearchResult>, TantivyError> {
+        let searcher = self.reader.searcher();
+
+        let schema = self.index.schema();
+        let title = schema.get_field("title").unwrap();
+        let body = schema.get_field("body").unwrap();
+
+        let query_parser = QueryParser::for_index(&self.index, vec![title, body]);
+        let query = query_parser.parse_query(query)?;
+        let top_docs = searcher.search(&query, &TopDocs::with_limit(limit))?;
+
+        let mut documents: Vec<SearchResult> = Vec::default();
+        for (_score, doc_address) in top_docs {
+            let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
+            documents.push(SearchResult::new(title, retrieved_doc));
+        }
+
+        Ok(documents)
     }
 }

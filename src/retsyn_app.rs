@@ -11,17 +11,19 @@ use confique::{
 use directories::ProjectDirs;
 use tantivy::TantivyError;
 
-use crate::{config::Conf, fulltext_index::FulltextIndex};
+use crate::{config::Conf, fulltext_index::FulltextIndex, search_result::SearchResult};
 
 pub(crate) static PROJECT_DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
     ProjectDirs::from("org", "symplasma", "retsyn").expect("should be able to create project dir")
 });
 
+type SearchResultList = Vec<SearchResult>;
+
 pub struct RetsynApp {
     config: Conf,
     search_text: String,
     last_search_text: String,
-    matched_items: Vec<String>,
+    matched_items: SearchResultList,
     selected_index: Option<usize>,
     last_input_time: Option<Instant>,
     debounce_duration: Duration,
@@ -79,7 +81,10 @@ impl RetsynApp {
             self.matched_items.clear();
             self.selected_index = None;
         } else {
-            self.matched_items = self.perform_search(&self.search_text);
+            self.matched_items = self
+                .fulltext_index
+                .search(&self.search_text, 20)
+                .expect("should be able to search the index");
             if !self.matched_items.is_empty() {
                 self.selected_index = Some(0);
             } else {
@@ -89,21 +94,13 @@ impl RetsynApp {
         self.last_search_text = self.search_text.clone();
     }
 
-    fn perform_search(&self, query: &str) -> Vec<String> {
-        let mut results = Vec::new();
-        for i in 1..=20 {
-            results.push(format!("Item {} matching '{}'", i, query));
-        }
-        results
-    }
-
     fn open_item(&mut self, index: usize, reveal: bool) {
         if index < self.matched_items.len() {
             let item = &self.matched_items[index];
             if reveal {
-                println!("Revealing item: {}", item);
+                println!("Revealing item: {:?}", item);
             } else {
-                println!("Opening item: {}", item);
+                println!("Opening item: {:?}", item);
             }
 
             if !self.search_text.is_empty() && !self.recent_queries.contains(&self.search_text) {
@@ -203,7 +200,7 @@ impl RetsynApp {
                         } else {
                             for (idx, item) in self.matched_items.iter().enumerate() {
                                 let is_selected = self.selected_index == Some(idx);
-                                let response = ui.selectable_label(is_selected, item);
+                                let response = ui.selectable_label(is_selected, item.title());
 
                                 if self.scroll_to_selected && is_selected {
                                     response.scroll_to_me(Some(egui::Align::Center));

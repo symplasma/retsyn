@@ -185,34 +185,9 @@ impl RetsynApp {
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
                         if self.search_text.is_empty() {
-                            ui.heading("Recent Queries");
-                            ui.add_space(5.0);
-
-                            for (idx, query) in self.recent_queries.iter().enumerate() {
-                                let is_selected = self.selected_index == Some(idx);
-                                let response = ui.selectable_label(is_selected, query);
-
-                                if response.clicked() {
-                                    self.search_text = query.clone();
-                                    self.last_input_time = Some(Instant::now());
-                                }
-                            }
+                            self.draw_recent_queries(ui);
                         } else {
-                            for (idx, item) in self.matched_items.iter().enumerate() {
-                                let is_selected = self.selected_index == Some(idx);
-                                let response = ui.selectable_label(is_selected, item.title());
-
-                                if self.scroll_to_selected && is_selected {
-                                    response.scroll_to_me(Some(egui::Align::Center));
-                                }
-
-                                if response.clicked() {
-                                    let shift_held = ui.input(|i| i.modifiers.shift);
-                                    clicked_item = Some((idx, shift_held));
-                                }
-                            }
-
-                            self.scroll_to_selected = false;
+                            self.draw_search_results(&mut clicked_item, ui);
                         }
                     });
 
@@ -221,6 +196,39 @@ impl RetsynApp {
                 }
             });
         });
+    }
+
+    fn draw_search_results(&mut self, clicked_item: &mut Option<(usize, bool)>, ui: &mut egui::Ui) {
+        for (idx, item) in self.matched_items.iter().enumerate() {
+            let is_selected = self.selected_index == Some(idx);
+            let response = ui.selectable_label(is_selected, item.title());
+
+            if self.scroll_to_selected && is_selected {
+                response.scroll_to_me(Some(egui::Align::Center));
+            }
+
+            if response.clicked() {
+                let shift_held = ui.input(|i| i.modifiers.shift);
+                *clicked_item = Some((idx, shift_held));
+            }
+        }
+
+        self.scroll_to_selected = false;
+    }
+
+    fn draw_recent_queries(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Recent Queries");
+        ui.add_space(5.0);
+
+        for (idx, query) in self.recent_queries.iter().enumerate() {
+            let is_selected = self.selected_index == Some(idx);
+            let response = ui.selectable_label(is_selected, query);
+
+            if response.clicked() {
+                self.search_text = query.clone();
+                self.last_input_time = Some(Instant::now());
+            }
+        }
     }
 
     fn handle_key_events(&mut self, ctx: &egui::Context) {

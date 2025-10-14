@@ -42,6 +42,8 @@ impl RetsynApp {
         };
 
         let fulltext_index = FulltextIndex::new(&config);
+        // TODO need to move this into a separate thread
+        fulltext_index.update();
 
         Self {
             config,

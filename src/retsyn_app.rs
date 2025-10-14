@@ -9,7 +9,8 @@ use confique::{
     toml::{self, FormatOptions},
 };
 use directories::ProjectDirs;
-use tantivy::TantivyError;
+use egui::Color32;
+use tantivy::{TantivyError, query};
 
 use crate::{config::Conf, fulltext_index::FulltextIndex, search_result::SearchResult};
 
@@ -23,7 +24,7 @@ pub struct RetsynApp {
     config: Conf,
     search_text: String,
     last_search_text: String,
-    matched_items: SearchResultList,
+    matched_items: Result<SearchResultList, TantivyError>,
     selected_index: Option<usize>,
     last_input_time: Option<Instant>,
     debounce_duration: Duration,
@@ -55,7 +56,7 @@ impl RetsynApp {
             config,
             search_text: String::new(),
             last_search_text: String::new(),
-            matched_items: Vec::new(),
+            matched_items: Ok(Vec::new()),
             selected_index: None,
             last_input_time: None,
             debounce_duration: Duration::from_millis(100),
@@ -72,41 +73,41 @@ impl RetsynApp {
 
     fn clear_search(&mut self) {
         self.search_text.clear();
-        self.matched_items.clear();
+        self.matched_items = Ok(Vec::default());
         self.selected_index = None;
     }
 
     fn update_search(&mut self) {
         if self.search_text.is_empty() {
-            self.matched_items.clear();
+            self.matched_items = Ok(Vec::default());
             self.selected_index = None;
         } else {
-            self.matched_items = self
-                .fulltext_index
-                .search(&self.search_text, 20)
-                .expect("should be able to search the index");
-            if !self.matched_items.is_empty() {
-                self.selected_index = Some(0);
+            self.matched_items = self.fulltext_index.search(&self.search_text, 20);
+            self.selected_index = if self.matched_items.as_ref().is_ok_and(|m| m.is_empty()) {
+                None
             } else {
-                self.selected_index = None;
+                Some(0)
             }
         }
         self.last_search_text = self.search_text.clone();
     }
 
     fn open_item(&mut self, index: usize, reveal: bool) {
-        if index < self.matched_items.len() {
-            let item = &self.matched_items[index];
-            if reveal {
-                println!("Revealing item: {:?}", item);
-            } else {
-                println!("Opening item: {:?}", item);
-            }
+        if let Ok(matched_items) = &self.matched_items {
+            if index < matched_items.len() {
+                let item = &matched_items[index];
+                if reveal {
+                    println!("Revealing item: {:?}", item);
+                } else {
+                    println!("Opening item: {:?}", item);
+                }
 
-            if !self.search_text.is_empty() && !self.recent_queries.contains(&self.search_text) {
-                self.recent_queries.insert(0, self.search_text.clone());
-                if self.recent_queries.len() > 10 {
-                    self.recent_queries.truncate(10);
+                if !self.search_text.is_empty() && !self.recent_queries.contains(&self.search_text)
+                {
+                    self.recent_queries.insert(0, self.search_text.clone());
+                    if self.recent_queries.len() > 10 {
+                        self.recent_queries.truncate(10);
+                    }
                 }
             }
         }
@@ -117,7 +118,11 @@ impl RetsynApp {
             return;
         }
 
-        let item_count = self.matched_items.len();
+        let item_count = self
+            .matched_items
+            .as_ref()
+            .and_then(|m| Ok(m.len()))
+            .unwrap_or_default();
         if item_count == 0 {
             return;
         }
@@ -178,6 +183,9 @@ impl RetsynApp {
                 response.request_focus();
 
                 ui.add_space(10.0);
+                if let Err(query_error) = &self.matched_items {
+                    ui.colored_label(Color32::RED, query_error.to_string());
+                }
 
                 let mut clicked_item: Option<(usize, bool)> = None;
 
@@ -199,21 +207,23 @@ impl RetsynApp {
     }
 
     fn draw_search_results(&mut self, clicked_item: &mut Option<(usize, bool)>, ui: &mut egui::Ui) {
-        for (idx, item) in self.matched_items.iter().enumerate() {
-            ui.vertical(|ui| {
-                let is_selected = self.selected_index == Some(idx);
-                let response = ui.selectable_label(is_selected, item.title());
-                item.draw_snippet(ui);
+        if let Ok(matched_items) = &self.matched_items {
+            for (idx, item) in matched_items.iter().enumerate() {
+                ui.vertical(|ui| {
+                    let is_selected = self.selected_index == Some(idx);
+                    let response = ui.selectable_label(is_selected, item.title());
+                    item.draw_snippet(ui);
 
-                if self.scroll_to_selected && is_selected {
-                    response.scroll_to_me(Some(egui::Align::Center));
-                }
+                    if self.scroll_to_selected && is_selected {
+                        response.scroll_to_me(Some(egui::Align::Center));
+                    }
 
-                if response.clicked() {
-                    let shift_held = ui.input(|i| i.modifiers.shift);
-                    *clicked_item = Some((idx, shift_held));
-                }
-            });
+                    if response.clicked() {
+                        let shift_held = ui.input(|i| i.modifiers.shift);
+                        *clicked_item = Some((idx, shift_held));
+                    }
+                });
+            }
         }
 
         self.scroll_to_selected = false;

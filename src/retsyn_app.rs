@@ -200,17 +200,20 @@ impl RetsynApp {
 
     fn draw_search_results(&mut self, clicked_item: &mut Option<(usize, bool)>, ui: &mut egui::Ui) {
         for (idx, item) in self.matched_items.iter().enumerate() {
-            let is_selected = self.selected_index == Some(idx);
-            let response = ui.selectable_label(is_selected, item.title());
+            ui.vertical(|ui| {
+                let is_selected = self.selected_index == Some(idx);
+                let response = ui.selectable_label(is_selected, item.title());
+                item.draw_snippet(ui);
 
-            if self.scroll_to_selected && is_selected {
-                response.scroll_to_me(Some(egui::Align::Center));
-            }
+                if self.scroll_to_selected && is_selected {
+                    response.scroll_to_me(Some(egui::Align::Center));
+                }
 
-            if response.clicked() {
-                let shift_held = ui.input(|i| i.modifiers.shift);
-                *clicked_item = Some((idx, shift_held));
-            }
+                if response.clicked() {
+                    let shift_held = ui.input(|i| i.modifiers.shift);
+                    *clicked_item = Some((idx, shift_held));
+                }
+            });
         }
 
         self.scroll_to_selected = false;

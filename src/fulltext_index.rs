@@ -1,5 +1,8 @@
 use ignore::Walk;
-use std::{fs::create_dir_all, path::PathBuf};
+use std::{
+    fs::{self, create_dir_all},
+    path::PathBuf,
+};
 use tantivy::{
     Index, IndexReader, ReloadPolicy, TantivyDocument, TantivyError,
     collector::TopDocs,
@@ -7,6 +10,7 @@ use tantivy::{
     doc,
     query::QueryParser,
     schema::{STORED, Schema, TEXT},
+    snippet::SnippetGenerator,
 };
 
 use crate::{
@@ -30,7 +34,7 @@ impl FulltextIndex {
         // the title of the file
         schema_builder.add_text_field("title", TEXT | STORED);
         // the main text of the file
-        schema_builder.add_text_field("body", TEXT);
+        schema_builder.add_text_field("body", TEXT | STORED);
         let schema = schema_builder.build();
 
         // create the index
@@ -78,11 +82,16 @@ impl FulltextIndex {
                 match result {
                     // TODO replace the
                     Ok(entry) => {
-                        let title_text = entry.path().to_string_lossy();
-                        match index_writer.add_document(doc!(title => *title_text, body => "body"))
-                        {
-                            Ok(_) => println!("{}", title_text),
-                            Err(e) => println!("could not index document: {}", e),
+                        if entry.file_type().map(|e| e.is_file()).unwrap_or(false) {
+                            let title_text = entry.path().to_string_lossy();
+                            // TODO properly handle non UTF-8 file contents
+                            let body_text = fs::read_to_string(entry.path()).unwrap_or_default();
+                            match index_writer
+                                .add_document(doc!(title => *title_text, body => body_text))
+                            {
+                                Ok(_) => println!("{}", title_text),
+                                Err(e) => println!("could not index document: {}", e),
+                            }
                         }
                     }
                     Err(e) => println!("could not open path: {}", e),
@@ -110,10 +119,13 @@ impl FulltextIndex {
         let query = query_parser.parse_query(query)?;
         let top_docs = searcher.search(&query, &TopDocs::with_limit(limit))?;
 
+        let snippet_generator = SnippetGenerator::create(&searcher, &query, body)?;
+
         let mut documents: Vec<SearchResult> = Vec::default();
         for (_score, doc_address) in top_docs {
             let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
-            documents.push(SearchResult::new(title, retrieved_doc));
+            let snippet = snippet_generator.snippet_from_doc(&retrieved_doc);
+            documents.push(SearchResult::new(title, retrieved_doc, snippet));
         }
 
         Ok(documents)

@@ -71,6 +71,7 @@ impl FulltextIndex {
         })
     }
 
+    /// Updates the fulltext index
     pub(crate) fn update(&self) -> Result<(), TantivyError> {
         let mut index_writer = self
             .index
@@ -126,6 +127,7 @@ impl FulltextIndex {
         let searcher = self.reader.searcher();
 
         let schema = self.index.schema();
+        let path = schema.get_field(PATH).unwrap();
         let title = schema.get_field(TITLE).unwrap();
         let body = schema.get_field(BODY).unwrap();
 
@@ -139,7 +141,7 @@ impl FulltextIndex {
         for (_score, doc_address) in top_docs {
             let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
             let snippet = snippet_generator.snippet_from_doc(&retrieved_doc);
-            documents.push(SearchResult::new(title, retrieved_doc, snippet));
+            documents.push(SearchResult::new(path, title, retrieved_doc, snippet));
         }
 
         Ok(documents)

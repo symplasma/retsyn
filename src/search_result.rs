@@ -7,14 +7,21 @@ use tantivy::{
 
 #[derive(Debug)]
 pub(crate) struct SearchResult {
+    path: String,
     title: String,
     snippet: Snippet,
     tantivy_doc: TantivyDocument,
 }
 
 impl SearchResult {
-    pub(crate) fn new(title: Field, doc: TantivyDocument, snippet: Snippet) -> Self {
+    pub(crate) fn new(path: Field, title: Field, doc: TantivyDocument, snippet: Snippet) -> Self {
         Self {
+            path: doc
+                .get_first(path)
+                .map(|t| t.as_str())
+                .flatten()
+                .unwrap_or_default()
+                .to_owned(),
             title: doc
                 .get_first(title)
                 .map(|t| t.as_str())
@@ -24,6 +31,10 @@ impl SearchResult {
             snippet,
             tantivy_doc: doc,
         }
+    }
+
+    pub(crate) fn path(&self) -> &str {
+        &self.path
     }
 
     pub(crate) fn title(&self) -> &str {

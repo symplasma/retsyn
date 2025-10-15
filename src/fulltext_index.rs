@@ -1,7 +1,10 @@
+use atomicwrites::{AtomicFile, OverwriteBehavior::DisallowOverwrite};
 use ignore::Walk;
 use std::{
     fs::{self, create_dir_all},
+    io::Write,
     path::PathBuf,
+    sync::LazyLock,
 };
 use tantivy::{
     DateTime, Index, IndexReader, ReloadPolicy, TantivyDocument, TantivyError,
@@ -18,6 +21,13 @@ use crate::{
     retsyn_app::PROJECT_DIRS,
     search_result::SearchResult,
 };
+
+pub(crate) static INDEXING_EPOCH_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    PROJECT_DIRS
+        .cache_dir()
+        .to_path_buf()
+        .join("last_indexing_epoch.txt")
+});
 
 const SOURCE: &str = "source";
 const INDEXED_AT: &str = "indexed_at";
@@ -60,6 +70,8 @@ impl FulltextIndex {
                 .expect("should be able to create the tantivy mmap directory"),
         ))
         .expect("should be able to create the tantivy managed directory");
+
+        // TODO conditionally `open` or `open_or_create` based on whether the indexing_epoch_file exists
         let index = Index::open_or_create(index_dir, schema)
             .expect("should be able to open or create the index");
 
@@ -96,10 +108,14 @@ impl FulltextIndex {
         let body = schema.get_field(BODY).unwrap();
 
         let source_str = "markdown_files";
+        let indexing_date_time = OffsetDateTime::now_utc();
         // this seems like overly complicated type juggling
-        let indexed_at_time = DateTime::from_primitive(
-            DateTime::from_utc(OffsetDateTime::now_utc()).into_primitive(),
-        );
+        let indexed_at_time =
+            DateTime::from_primitive(DateTime::from_utc(indexing_date_time).into_primitive());
+
+        // setting up the indexing epoch
+        let indexing_epoch_file = AtomicFile::new(&*INDEXING_EPOCH_PATH, DisallowOverwrite);
+        let indexing_epoch = indexing_date_time.unix_timestamp();
 
         for dir in &self.markdown_files {
             for result in Walk::new(dir) {
@@ -141,6 +157,11 @@ impl FulltextIndex {
 
         // commit the changes so that searchers can see the changes
         index_writer.commit()?;
+
+        // write the epoch of the last indexing to use for incremental updates
+        indexing_epoch_file
+            .write(|f| f.write_all(indexing_epoch.to_string().as_bytes()))
+            .expect("should be able to write to the indexing epoch file");
 
         Ok(())
     }

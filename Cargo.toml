@@ -8,6 +8,7 @@ name = "retsyn"
 path = "src/main.rs"
 
 [dependencies]
+atomicwrites = "0.4.4"
 confique = { version = "0.3.1", features = ["toml"] }
 directories = "6.0.0"
 eframe = { version = "0.32", default-features = false, features = [

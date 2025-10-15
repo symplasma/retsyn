@@ -1,12 +1,15 @@
 use egui::{Color32, Frame, TextStyle};
 use tantivy::{
-    TantivyDocument,
-    schema::{Field, Value as _},
+    DateTime, TantivyDocument,
+    schema::{Field, Value},
     snippet::Snippet,
 };
+use time::{UtcOffset, format_description::well_known::Rfc2822};
 
 #[derive(Debug)]
 pub(crate) struct SearchResult {
+    source: String,
+    indexed_at: DateTime,
     path: String,
     title: String,
     snippet: Snippet,
@@ -14,8 +17,27 @@ pub(crate) struct SearchResult {
 }
 
 impl SearchResult {
-    pub(crate) fn new(path: Field, title: Field, doc: TantivyDocument, snippet: Snippet) -> Self {
+    pub(crate) fn new(
+        source: Field,
+        indexed_at: Field,
+        path: Field,
+        title: Field,
+        doc: TantivyDocument,
+        snippet: Snippet,
+    ) -> Self {
         Self {
+            source: doc
+                .get_first(source)
+                .map(|t| t.as_str())
+                .flatten()
+                .unwrap_or_default()
+                .to_owned(),
+            indexed_at: doc
+                .get_first(indexed_at)
+                .map(|t| t.as_datetime())
+                .flatten()
+                .unwrap_or_default()
+                .to_owned(),
             path: doc
                 .get_first(path)
                 .map(|t| t.as_str())
@@ -31,6 +53,16 @@ impl SearchResult {
             snippet,
             tantivy_doc: doc,
         }
+    }
+
+    pub(crate) fn indexed_at(&self) -> String {
+        self.indexed_at
+            .into_offset(
+                UtcOffset::current_local_offset()
+                    .expect("should be able to get the user's timezone offset"),
+            )
+            .format(&Rfc2822)
+            .expect("should be able to format indexed at timestamp into RFC3339")
     }
 
     pub(crate) fn path(&self) -> &str {

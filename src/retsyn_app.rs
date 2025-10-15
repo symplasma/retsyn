@@ -210,10 +210,12 @@ impl RetsynApp {
         if let Ok(matched_items) = &self.matched_items {
             for (idx, item) in matched_items.iter().enumerate() {
                 ui.vertical(|ui| {
+                    // draw the item header
                     ui.horizontal(|ui| {
                         let is_selected = self.selected_index == Some(idx);
                         let response = ui.selectable_label(is_selected, item.title());
                         ui.label(item.path());
+                        ui.label(item.indexed_at());
 
                         if self.scroll_to_selected && is_selected {
                             response.scroll_to_me(Some(egui::Align::Center));
@@ -224,6 +226,8 @@ impl RetsynApp {
                             *clicked_item = Some((idx, shift_held));
                         }
                     });
+
+                    // draw the item snippet
                     item.draw_snippet(ui);
                 });
             }

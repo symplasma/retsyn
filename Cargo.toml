@@ -19,3 +19,4 @@ egui = "0.32"
 ignore = "0.4.23"
 shellexpand = "3.1.1"
 tantivy = "0.25.0"
+time = { version = "0.3.44", features = ["parsing", "formatting", "local-offset"] }

@@ -4,14 +4,14 @@ use std::{
     path::PathBuf,
 };
 use tantivy::{
-    Index, IndexReader, ReloadPolicy, TantivyDocument, TantivyError,
+    DateTime, Index, IndexReader, ReloadPolicy, TantivyDocument, TantivyError,
     collector::TopDocs,
     directory::{ManagedDirectory, MmapDirectory},
-    doc,
     query::QueryParser,
-    schema::{STORED, Schema, TEXT},
+    schema::{DateOptions, INDEXED, STORED, Schema, TEXT},
     snippet::SnippetGenerator,
 };
+use time::OffsetDateTime;
 
 use crate::{
     config::{Conf, PathList},
@@ -19,6 +19,8 @@ use crate::{
     search_result::SearchResult,
 };
 
+const SOURCE: &str = "source";
+const INDEXED_AT: &str = "indexed_at";
 const PATH: &str = "path";
 const TITLE: &str = "title";
 const BODY: &str = "body";
@@ -33,6 +35,14 @@ impl FulltextIndex {
     pub(crate) fn new(config: &Conf) -> Result<Self, TantivyError> {
         // setup the schema
         let mut schema_builder = Schema::builder();
+        // add the source, the module that discovered this file
+        schema_builder.add_text_field(SOURCE, TEXT | STORED);
+        // add the indexed at field
+        let date_opts = DateOptions::from(INDEXED)
+            .set_stored()
+            .set_fast()
+            .set_precision(tantivy::schema::DateTimePrecision::Seconds);
+        schema_builder.add_date_field(INDEXED_AT, date_opts);
         // the filename
         schema_builder.add_text_field(PATH, TEXT | STORED);
         // the title of the file
@@ -79,9 +89,17 @@ impl FulltextIndex {
             .expect("should be able to obtain an index writer");
 
         let schema = self.index.schema();
+        let source = schema.get_field(SOURCE).unwrap();
+        let indexed_at = schema.get_field(INDEXED_AT).unwrap();
         let path = schema.get_field(PATH).unwrap();
         let title = schema.get_field(TITLE).unwrap();
         let body = schema.get_field(BODY).unwrap();
+
+        let source_str = "markdown_files";
+        // this seems like overly complicated type juggling
+        let indexed_at_time = DateTime::from_primitive(
+            DateTime::from_utc(OffsetDateTime::now_utc()).into_primitive(),
+        );
 
         for dir in &self.markdown_files {
             for result in Walk::new(dir) {
@@ -97,13 +115,21 @@ impl FulltextIndex {
                             // TODO properly handle non UTF-8 file contents
                             let body_text = fs::read_to_string(entry.path()).unwrap_or_default();
 
+                            // we were using the `doc!()` macro, but it doesn't seem to play well with date fields
+                            let mut tantivy_doc = TantivyDocument::default();
+                            tantivy_doc.add_text(source, source_str);
+                            tantivy_doc.add_date(indexed_at, indexed_at_time);
+                            tantivy_doc.add_text(path, entry_path.clone());
+                            tantivy_doc.add_text(title, title_text);
+                            tantivy_doc.add_text(body, body_text);
+
                             // add the document to the index
-                            match index_writer.add_document(
-                                doc!(path => *entry_path, title => *title_text, body => body_text),
-                            ) {
-                                Ok(_) => println!("{}", title_text),
+                            match index_writer.add_document(tantivy_doc) {
+                                Ok(_) => println!("{}", &entry_path),
                                 // TODO switch to the tracing crate
-                                Err(e) => println!("could not index document: {}", e),
+                                Err(e) => {
+                                    println!("could not index document: {}: {}", entry_path, e)
+                                }
                             }
                         }
                     }
@@ -127,6 +153,8 @@ impl FulltextIndex {
         let searcher = self.reader.searcher();
 
         let schema = self.index.schema();
+        let source = schema.get_field(SOURCE).unwrap();
+        let indexed_at = schema.get_field(INDEXED_AT).unwrap();
         let path = schema.get_field(PATH).unwrap();
         let title = schema.get_field(TITLE).unwrap();
         let body = schema.get_field(BODY).unwrap();
@@ -141,7 +169,14 @@ impl FulltextIndex {
         for (_score, doc_address) in top_docs {
             let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
             let snippet = snippet_generator.snippet_from_doc(&retrieved_doc);
-            documents.push(SearchResult::new(path, title, retrieved_doc, snippet));
+            documents.push(SearchResult::new(
+                source,
+                indexed_at,
+                path,
+                title,
+                retrieved_doc,
+                snippet,
+            ));
         }
 
         Ok(documents)

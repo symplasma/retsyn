@@ -1,4 +1,4 @@
-use egui::{Color32, TextStyle};
+use egui::{Color32, Frame, TextStyle};
 use tantivy::{
     TantivyDocument,
     schema::{Field, Value as _},
@@ -31,12 +31,13 @@ impl SearchResult {
     }
 
     pub(crate) fn draw_snippet(&self, ui: &mut egui::Ui) {
-        egui::Frame::none()
+        Frame::NONE
             .fill(Color32::from_rgb(240, 240, 240))
             .inner_margin(4.0)
             .show(ui, |ui| {
                 ui.horizontal_wrapped(|ui| {
-                    let width = ui.fonts(|f| f.glyph_width(&TextStyle::Body.resolve(ui.style()), ' '));
+                    let width =
+                        ui.fonts(|f| f.glyph_width(&TextStyle::Body.resolve(ui.style()), ' '));
                     ui.spacing_mut().item_spacing.x = width;
 
                     let mut start_from = 0;

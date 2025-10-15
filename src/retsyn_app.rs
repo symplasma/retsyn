@@ -10,7 +10,7 @@ use confique::{
 };
 use directories::ProjectDirs;
 use egui::Color32;
-use tantivy::{TantivyError, query};
+use tantivy::TantivyError;
 
 use crate::{config::Conf, fulltext_index::FulltextIndex, search_result::SearchResult};
 

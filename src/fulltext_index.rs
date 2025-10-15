@@ -19,6 +19,10 @@ use crate::{
     search_result::SearchResult,
 };
 
+const PATH: &str = "path";
+const TITLE: &str = "title";
+const BODY: &str = "body";
+
 pub(crate) struct FulltextIndex {
     markdown_files: PathList,
     index: Index,
@@ -30,11 +34,11 @@ impl FulltextIndex {
         // setup the schema
         let mut schema_builder = Schema::builder();
         // the filename
-        schema_builder.add_text_field("name", TEXT | STORED);
+        schema_builder.add_text_field(PATH, TEXT | STORED);
         // the title of the file
-        schema_builder.add_text_field("title", TEXT | STORED);
+        schema_builder.add_text_field(TITLE, TEXT | STORED);
         // the main text of the file
-        schema_builder.add_text_field("body", TEXT | STORED);
+        schema_builder.add_text_field(BODY, TEXT | STORED);
         let schema = schema_builder.build();
 
         // create the index
@@ -74,8 +78,9 @@ impl FulltextIndex {
             .expect("should be able to obtain an index writer");
 
         let schema = self.index.schema();
-        let title = schema.get_field("title").unwrap();
-        let body = schema.get_field("body").unwrap();
+        let path = schema.get_field(PATH).unwrap();
+        let title = schema.get_field(TITLE).unwrap();
+        let body = schema.get_field(BODY).unwrap();
 
         for dir in &self.markdown_files {
             for result in Walk::new(dir) {
@@ -83,22 +88,31 @@ impl FulltextIndex {
                     // TODO replace the
                     Ok(entry) => {
                         if entry.file_type().map(|e| e.is_file()).unwrap_or(false) {
+                            // the file path on disk
+                            // TODO we'll need to modify this or add a volume identifier if we index from more than one host
+                            let entry_path = entry.path().to_string_lossy();
+                            // TODO set title here based on file type and index source
                             let title_text = entry.path().to_string_lossy();
                             // TODO properly handle non UTF-8 file contents
                             let body_text = fs::read_to_string(entry.path()).unwrap_or_default();
-                            match index_writer
-                                .add_document(doc!(title => *title_text, body => body_text))
-                            {
+
+                            // add the document to the index
+                            match index_writer.add_document(
+                                doc!(path => *entry_path, title => *title_text, body => body_text),
+                            ) {
                                 Ok(_) => println!("{}", title_text),
+                                // TODO switch to the tracing crate
                                 Err(e) => println!("could not index document: {}", e),
                             }
                         }
                     }
+                    // TODO switch to the tracing crate
                     Err(e) => println!("could not open path: {}", e),
                 }
             }
         }
 
+        // commit the changes so that searchers can see the changes
         index_writer.commit()?;
 
         Ok(())
@@ -112,8 +126,8 @@ impl FulltextIndex {
         let searcher = self.reader.searcher();
 
         let schema = self.index.schema();
-        let title = schema.get_field("title").unwrap();
-        let body = schema.get_field("body").unwrap();
+        let title = schema.get_field(TITLE).unwrap();
+        let body = schema.get_field(BODY).unwrap();
 
         let query_parser = QueryParser::for_index(&self.index, vec![title, body]);
         let query = query_parser.parse_query(query)?;

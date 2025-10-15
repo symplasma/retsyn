@@ -36,6 +36,7 @@ impl SearchResult {
             .inner_margin(4.0)
             .show(ui, |ui| {
                 ui.horizontal_wrapped(|ui| {
+                    // TODO adjust spacing to make it more visually pleasing
                     let width =
                         ui.fonts(|f| f.glyph_width(&TextStyle::Body.resolve(ui.style()), ' '));
                     ui.spacing_mut().item_spacing.x = width;

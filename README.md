@@ -2,6 +2,10 @@
 
 Search with retsyn.
 
+## Status: Alpha
+
+This is currently **Alpha stage** software. That means that it is incomplete and mostly untested/unproven.
+
 ## Background
 
 Retsyn is a redo of the indexing, search, and ranking libraries from [educe](https://github.com/symplasma/educe), the extraction, normalization, and data cleaning component of the [Symplasma](https://www.symplasma.com/) project.

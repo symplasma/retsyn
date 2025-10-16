@@ -2,6 +2,19 @@
 name = "retsyn"
 version = "0.1.0"
 edition = "2024"
+license = "BSD-3-Clause"                                                         # https://spdx.org/licenses/
+authors = ["Elio Grieco <grieco@egx.com>"]
+description = "A full text search program. Can be used via CLI or as a library."
+repository = "https://github.com/symplasma/retsyn"
+readme = "README.md"
+keywords = ["tantivy", "search", "find", "open", "filter"]                       # free text
+categories = ["command-line-utilities"]                                          # https://crates.io/category_slugs
+exclude = [".vscode/*", ".gitignore", ".aider.*"]
+# https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "retsyn"
+path = "src/lib.rs"
 
 [[bin]]
 name = "retsyn"
@@ -21,4 +34,8 @@ ignore = "0.4.23"
 open = "5.3.2"
 shellexpand = "3.1.1"
 tantivy = "0.25.0"
-time = { version = "0.3.44", features = ["parsing", "formatting", "local-offset"] }
+time = { version = "0.3.44", features = [
+    "parsing",
+    "formatting",
+    "local-offset",
+] }

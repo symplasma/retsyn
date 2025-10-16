@@ -1,4 +1,4 @@
-use atomicwrites::{AtomicFile, OverwriteBehavior::DisallowOverwrite};
+use atomicwrites::{AtomicFile, OverwriteBehavior::AllowOverwrite};
 use ignore::Walk;
 use std::{
     fs::{self, create_dir_all},
@@ -7,7 +7,7 @@ use std::{
     sync::LazyLock,
 };
 use tantivy::{
-    DateTime, Index, IndexReader, ReloadPolicy, TantivyDocument, TantivyError,
+    DateTime, Index, IndexReader, IndexSettings, ReloadPolicy, TantivyDocument, TantivyError,
     collector::TopDocs,
     directory::{ManagedDirectory, MmapDirectory},
     query::QueryParser,
@@ -36,6 +36,7 @@ const TITLE: &str = "title";
 const BODY: &str = "body";
 
 pub(crate) struct FulltextIndex {
+    last_indexing_epoch: Option<OffsetDateTime>,
     markdown_files: PathList,
     index: Index,
     reader: IndexReader,
@@ -64,16 +65,40 @@ impl FulltextIndex {
         // create the index
         let index_path = PROJECT_DIRS.cache_dir().join("tantivy");
         create_dir_all(&index_path)?;
-        println!("opening tantivy index in: {}", index_path.to_string_lossy());
+        println!(
+            "tantivy index directory is: {}",
+            index_path.to_string_lossy()
+        );
         let index_dir = ManagedDirectory::wrap(Box::new(
             MmapDirectory::open(index_path)
                 .expect("should be able to create the tantivy mmap directory"),
         ))
         .expect("should be able to create the tantivy managed directory");
 
-        // TODO conditionally `open` or `open_or_create` based on whether the indexing_epoch_file exists
-        let index = Index::open_or_create(index_dir, schema)
-            .expect("should be able to open or create the index");
+        // attempt to read the last indexing epoch
+        let last_indexing_epoch = match INDEXING_EPOCH_PATH.exists() {
+            true => match fs::read_to_string(INDEXING_EPOCH_PATH.as_path()) {
+                Ok(epoch_file) => match epoch_file.parse::<i64>() {
+                    Ok(e) => match OffsetDateTime::from_unix_timestamp(e) {
+                        Ok(dt) => Some(dt),
+                        Err(_) => None,
+                    },
+                    Err(_) => None,
+                },
+                Err(_) => None,
+            },
+            false => None,
+        };
+
+        // if the indexing_epoch_file exists `open_or_create` the existing index, otherwise `create` a new one
+        let index = if last_indexing_epoch.is_some() {
+            println!("opening or creating tantivy index");
+            // calling open or create just in case the epoch file exists but the actual index was deleted
+            Index::open_or_create(index_dir, schema)?
+        } else {
+            println!("creating new tantivy index");
+            Index::create(index_dir, schema, IndexSettings::default())?
+        };
 
         // create the reader here
         let reader = index
@@ -82,6 +107,7 @@ impl FulltextIndex {
             .try_into()?;
 
         Ok(Self {
+            last_indexing_epoch,
             markdown_files: config
                 .markdown_files
                 .iter()
@@ -114,7 +140,7 @@ impl FulltextIndex {
             DateTime::from_primitive(DateTime::from_utc(indexing_date_time).into_primitive());
 
         // setting up the indexing epoch
-        let indexing_epoch_file = AtomicFile::new(&*INDEXING_EPOCH_PATH, DisallowOverwrite);
+        let indexing_epoch_file = AtomicFile::new(&*INDEXING_EPOCH_PATH, AllowOverwrite);
         let indexing_epoch = indexing_date_time.unix_timestamp();
 
         for dir in &self.markdown_files {
@@ -159,6 +185,11 @@ impl FulltextIndex {
         index_writer.commit()?;
 
         // write the epoch of the last indexing to use for incremental updates
+        println!(
+            "writing indexing epoch {} to: {}",
+            indexing_epoch,
+            INDEXING_EPOCH_PATH.to_string_lossy()
+        );
         indexing_epoch_file
             .write(|f| f.write_all(indexing_epoch.to_string().as_bytes()))
             .expect("should be able to write to the indexing epoch file");

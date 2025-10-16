@@ -160,28 +160,35 @@ impl FulltextIndex {
                                 IndexRecordOption::Basic,
                             );
 
-                            let mut entry_needs_update = false;
-
-                            // if the last_indexing_epoch is Some and the file's last update time is later than it, then delete the entry from the index by path
-                            if let Some(last_indexing_epoch) = self.last_indexing_epoch {
-                                if let Ok(metadata) = entry.metadata() {
-                                    // TODO do we need to check created time if this field is empty?
-                                    if let Ok(file_modified) = metadata.modified() {
-                                        if file_modified > last_indexing_epoch {
-                                            let doc_path_term =
-                                                Term::from_field_text(path, &entry_path);
-                                            println!("deleting file from index: {}", entry_path);
-                                            index_writer.delete_term(doc_path_term);
-                                            entry_needs_update = true;
-                                        }
-                                    }
-                                }
-                            }
-
                             // see if the document is already present in the index
                             if let Ok(count) = searcher.search(&query, &Count) {
-                                if count > 0 || !entry_needs_update {
-                                    continue;
+                                if count > 0 {
+                                    let mut entry_needs_update = false;
+
+                                    // if the last_indexing_epoch is Some and the file's last update time is later than it, then delete the entry from the index by path
+                                    // only check the update time if the item is already in the database
+                                    if let Some(last_indexing_epoch) = self.last_indexing_epoch {
+                                        if let Ok(metadata) = entry.metadata() {
+                                            // TODO do we need to check created time if this field is empty?
+                                            if let Ok(file_modified) = metadata.modified() {
+                                                if file_modified > last_indexing_epoch {
+                                                    let doc_path_term =
+                                                        Term::from_field_text(path, &entry_path);
+                                                    println!(
+                                                        "deleting file from index: {}",
+                                                        entry_path
+                                                    );
+                                                    index_writer.delete_term(doc_path_term);
+                                                    entry_needs_update = true;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // if the entry does not need an update, continue with the next item
+                                    if !entry_needs_update {
+                                        continue;
+                                    };
                                 }
                             }
 

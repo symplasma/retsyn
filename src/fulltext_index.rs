@@ -8,10 +8,10 @@ use std::{
 };
 use tantivy::{
     DateTime, Index, IndexReader, IndexSettings, ReloadPolicy, TantivyDocument, TantivyError, Term,
-    collector::TopDocs,
+    collector::{Count, TopDocs},
     directory::{ManagedDirectory, MmapDirectory},
-    query::QueryParser,
-    schema::{DateOptions, INDEXED, STORED, Schema, TEXT},
+    query::{QueryParser, TermQuery},
+    schema::{DateOptions, INDEXED, IndexRecordOption, STORED, Schema, TEXT},
     snippet::SnippetGenerator,
 };
 use time::OffsetDateTime;
@@ -152,12 +152,15 @@ impl FulltextIndex {
                             // the file path on disk
                             // TODO we'll need to modify this or add a volume identifier if we index from more than one host
                             let entry_path = entry.path().to_string_lossy();
-                            // TODO set title here based on file type and index source
-                            let title_text = entry.path().to_string_lossy();
-                            // TODO properly handle non UTF-8 file contents
-                            let body_text = fs::read_to_string(entry.path()).unwrap_or_default();
 
-                            // TODO need to see if the document is already present in the index
+                            // check if the file is already in the index
+                            let searcher = self.reader.searcher();
+                            let query = TermQuery::new(
+                                Term::from_field_text(path, &entry_path),
+                                IndexRecordOption::Basic,
+                            );
+
+                            let mut entry_needs_update = false;
 
                             // if the last_indexing_epoch is Some and the file's last update time is later than it, then delete the entry from the index by path
                             if let Some(last_indexing_epoch) = self.last_indexing_epoch {
@@ -169,10 +172,23 @@ impl FulltextIndex {
                                                 Term::from_field_text(path, &entry_path);
                                             println!("deleting file from index: {}", entry_path);
                                             index_writer.delete_term(doc_path_term);
+                                            entry_needs_update = true;
                                         }
                                     }
                                 }
                             }
+
+                            // see if the document is already present in the index
+                            if let Ok(count) = searcher.search(&query, &Count) {
+                                if count > 0 || !entry_needs_update {
+                                    continue;
+                                }
+                            }
+
+                            // TODO set title here based on file type and index source
+                            let title_text = entry.path().to_string_lossy();
+                            // TODO properly handle non UTF-8 file contents
+                            let body_text = fs::read_to_string(entry.path()).unwrap_or_default();
 
                             // we were using the `doc!()` macro, but it doesn't seem to play well with date fields
                             let mut tantivy_doc = TantivyDocument::default();

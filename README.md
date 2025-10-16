@@ -15,18 +15,24 @@ It's being rewritten for two primary reasons:
 
 This is a list of features. Implemented features are checked, the rest are planned.
 
-- [ ] Ensure that invalid queries display errors gracefully
+- [x] Ensure that invalid queries display errors gracefully
 - [ ] Allow clearing of search indexes via a CLI flag
-- [ ] Get item opening working
-- [ ] Allow revealing of items
+- [x] Get item opening working
+- [x] Hold `Alt` to open or reveal an item without quitting
+- [x] Hold `Shift` to reveal an item in the file browser
 - [ ] Show all items that fit within the current window
-- [ ] Show snippets for items
+- [x] Show snippets for items
 - [ ] Record and show recent queries
-- [ ] Allow updates for items in the full text index
-- [ ] Allow incremental updates to the index
+- [x] Allow updates for items in the full text index
+- [x] Allow incremental updates to the index
 - [ ] Ensure that search debounce is working correctly
 - [ ] Allow toggling between fuzzy and exact search
 - [ ] Allow indexing in another thread
+- [ ] Do indexing in background thread
+- [ ] Add garbage collection for tantivy store after indexing completes
+
+### Future Features
+
 - [ ] Add the link database
 - [ ] Add phonetic search
 - [ ] Add vector search based on embeddings

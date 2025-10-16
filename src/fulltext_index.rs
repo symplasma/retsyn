@@ -3,7 +3,7 @@ use ignore::Walk;
 use std::{
     fs::{self, create_dir_all},
     io::Write,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::LazyLock,
 };
 use tantivy::{
@@ -154,57 +154,18 @@ impl FulltextIndex {
                             // TODO we'll need to modify this or add a volume identifier if we index from more than one host
                             let entry_path = entry.path().to_string_lossy();
 
-                            // check if the file is already in the index
-                            let searcher = self.reader.searcher();
-                            let query = TermQuery::new(
-                                Term::from_field_text(path, &entry_path),
-                                IndexRecordOption::Basic,
-                            );
-
                             let mut entry_up_to_date = false;
 
                             // see if the document is already present in the index
-                            match searcher.search(&query, &Count) {
-                                Err(e) => println!("error searching for document: {}", e),
-                                Ok(count) => {
-                                    if count < 1 {
-                                        println!("document not found in index: {}", entry_path)
-                                    } else {
-                                        println!("found document in index: {}", &entry_path);
-                                        entry_up_to_date = true;
+                            if self.file_is_indexed(entry.path()) {
+                                // println!("found document in index: {}", &entry_path);
+                                // if the last_indexing_epoch is Some and the file's last update time is later than it, then delete the entry from the index by path
+                                entry_up_to_date = self.entry_up_to_date(&entry);
 
-                                        // if the last_indexing_epoch is Some and the file's last update time is later than it, then delete the entry from the index by path
-                                        // only check the update time if the item is already in the database
-                                        match self.last_indexing_epoch {
-                                            None => println!("last indexing epoch is not set"),
-                                            Some(last_indexing_epoch) => match entry.metadata() {
-                                                Err(e) => {
-                                                    println!("could not get metadata: {}", e)
-                                                }
-                                                Ok(metadata) => match metadata.modified() {
-                                                    Err(e) => println!(
-                                                        "could not get modification date: {}",
-                                                        e
-                                                    ),
-                                                    Ok(file_modified) => {
-                                                        if file_modified > last_indexing_epoch {
-                                                            let doc_path_term =
-                                                                Term::from_field_text(
-                                                                    path,
-                                                                    &entry_path,
-                                                                );
-                                                            println!(
-                                                                "deleting file from index: {}",
-                                                                entry_path
-                                                            );
-                                                            index_writer.delete_term(doc_path_term);
-                                                            entry_up_to_date = false;
-                                                        }
-                                                    }
-                                                },
-                                            },
-                                        }
-                                    }
+                                // only check the update time if the item is already in the database
+                                if !entry_up_to_date {
+                                    let doc_path_term = Term::from_field_text(path, &entry_path);
+                                    index_writer.delete_term(doc_path_term);
                                 }
                             }
 
@@ -293,5 +254,75 @@ impl FulltextIndex {
         }
 
         Ok(documents)
+    }
+
+    fn file_is_indexed(&self, path: &Path) -> bool {
+        let schema = self.index.schema();
+        let path_field = schema.get_field(PATH).unwrap();
+
+        // let query_text = &path.iter().last().map(|p| p.to_string_lossy()).unwrap();
+        // print!("searching for query text: {}", query_text);
+        // let query = TermQuery::new(
+        //     Term::from_field_text(path_field, query_text),
+        //     IndexRecordOption::Basic,
+        // );
+
+        let query_text = &path.iter().last().map(|p| p.to_string_lossy()).unwrap();
+        let query_parser = QueryParser::for_index(&self.index, vec![path_field]);
+        let query_string = format!("\"{}\"", query_text);
+        let query = query_parser.parse_query(&query_string).unwrap();
+
+        // dbg!(&query);
+
+        let searcher = self.reader.searcher();
+
+        // see if the document is already present in the index
+        match searcher.search(&query, &Count) {
+            Err(e) => {
+                println!("error searching for document: {}", e);
+                false
+            }
+            Ok(count) => {
+                // println!("found in index {} times: {}", count, path.to_string_lossy());
+                if count > 0 {
+                    true
+                } else {
+                    // println!("document not found in index: {}", file_path);
+                    false
+                }
+            }
+        }
+    }
+
+    fn entry_up_to_date(&self, entry: &ignore::DirEntry) -> bool {
+        match self.last_indexing_epoch {
+            None => {
+                println!("last indexing epoch is not set");
+                true
+            }
+            Some(last_indexing_epoch) => match entry.metadata() {
+                Err(e) => {
+                    println!("could not get metadata: {}", e);
+                    true
+                }
+                Ok(metadata) => match metadata.modified() {
+                    Err(e) => {
+                        println!("could not get modification date: {}", e);
+                        true
+                    }
+                    Ok(file_modified) => {
+                        if file_modified > last_indexing_epoch {
+                            // println!(
+                            //     "deleting file from index: {}",
+                            //     entry.path().to_string_lossy()
+                            // );
+                            false
+                        } else {
+                            true
+                        }
+                    }
+                },
+            },
+        }
     }
 }

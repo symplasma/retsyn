@@ -7,7 +7,7 @@ use std::{
     sync::LazyLock,
 };
 use tantivy::{
-    DateTime, Index, IndexReader, IndexSettings, ReloadPolicy, TantivyDocument, TantivyError,
+    DateTime, Index, IndexReader, IndexSettings, ReloadPolicy, TantivyDocument, TantivyError, Term,
     collector::TopDocs,
     directory::{ManagedDirectory, MmapDirectory},
     query::QueryParser,
@@ -157,6 +157,23 @@ impl FulltextIndex {
                             // TODO properly handle non UTF-8 file contents
                             let body_text = fs::read_to_string(entry.path()).unwrap_or_default();
 
+                            // TODO need to see if the document is already present in the index
+
+                            // if the last_indexing_epoch is Some and the file's last update time is later than it, then delete the entry from the index by path
+                            if let Some(last_indexing_epoch) = self.last_indexing_epoch {
+                                if let Ok(metadata) = entry.metadata() {
+                                    // TODO do we need to check created time if this field is empty?
+                                    if let Ok(file_modified) = metadata.modified() {
+                                        if file_modified > last_indexing_epoch {
+                                            let doc_path_term =
+                                                Term::from_field_text(path, &entry_path);
+                                            println!("deleting file from index: {}", entry_path);
+                                            index_writer.delete_term(doc_path_term);
+                                        }
+                                    }
+                                }
+                            }
+
                             // we were using the `doc!()` macro, but it doesn't seem to play well with date fields
                             let mut tantivy_doc = TantivyDocument::default();
                             tantivy_doc.add_text(source, source_str);
@@ -182,6 +199,7 @@ impl FulltextIndex {
         }
 
         // commit the changes so that searchers can see the changes
+        println!("committing changes to fulltext index...");
         index_writer.commit()?;
 
         // write the epoch of the last indexing to use for incremental updates

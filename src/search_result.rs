@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use egui::{Color32, Frame, TextStyle};
 use tantivy::{
     DateTime, TantivyDocument,
@@ -95,5 +97,19 @@ impl SearchResult {
                     }
                 });
             });
+    }
+
+    pub(crate) fn open(&self) {
+        println!("Revealing item: {}", self.path);
+        if let Some(path) = PathBuf::from(self.path.clone()).parent() {
+            // TODO handle errors in open and display them to the user
+            open::with(path, "xdg-open");
+        }
+    }
+
+    pub(crate) fn reveal(&self) {
+        println!("Opening item: {}", self.path);
+        // TODO handle errors in open and display them to the user
+        open::that(self.path.clone());
     }
 }

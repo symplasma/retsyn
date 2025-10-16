@@ -97,9 +97,9 @@ impl RetsynApp {
             if index < matched_items.len() {
                 let item = &matched_items[index];
                 if reveal {
-                    println!("Revealing item: {:?}", item);
+                    item.reveal();
                 } else {
-                    println!("Opening item: {:?}", item);
+                    item.open();
                 }
 
                 if !self.search_text.is_empty() && !self.recent_queries.contains(&self.search_text)
@@ -159,7 +159,8 @@ impl RetsynApp {
 
         if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
             if let Some(index) = self.selected_index {
-                let shift_held = ctx.input(|i| i.modifiers.shift);
+                // TODO find out why we need to negate shift for correct behavior here
+                let shift_held = !(ctx.input(|i| i.modifiers.shift));
                 self.open_item(index, shift_held);
             }
         }
@@ -198,10 +199,6 @@ impl RetsynApp {
                             self.draw_search_results(&mut clicked_item, ui);
                         }
                     });
-
-                if let Some((idx, shift_held)) = clicked_item {
-                    self.open_item(idx, shift_held);
-                }
             });
         });
     }

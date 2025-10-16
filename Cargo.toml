@@ -18,6 +18,7 @@ eframe = { version = "0.32", default-features = false, features = [
 ] }
 egui = "0.32"
 ignore = "0.4.23"
+open = "5.3.2"
 shellexpand = "3.1.1"
 tantivy = "0.25.0"
 time = { version = "0.3.44", features = ["parsing", "formatting", "local-offset"] }

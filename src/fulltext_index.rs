@@ -182,7 +182,6 @@ impl FulltextIndex {
 
                             // if the entry does not need an update, continue with the next item
                             if entry_up_to_date {
-                                println!("skipping document: {}", &entry_path);
                                 continue;
                             };
 

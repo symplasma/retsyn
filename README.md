@@ -16,20 +16,34 @@ It's being rewritten for two primary reasons:
 This is a list of features. Implemented features are checked, the rest are planned.
 
 - [x] Ensure that invalid queries display errors gracefully
-- [ ] Allow clearing of search indexes via a CLI flag
 - [x] Get item opening working
 - [x] Hold `Alt` to open or reveal an item without quitting
 - [x] Hold `Shift` to reveal an item in the file browser
-- [ ] Show all items that fit within the current window
 - [x] Show snippets for items
-- [ ] Record and show recent queries
 - [x] Allow updates for items in the full text index
 - [x] Allow incremental updates to the index
+- [ ] Add better navigation
+  - [x] Clear query via `Ctrl+u` or `Esc`
+  - [x] Clear to end of query via `Ctrl+k`
+  - [ ] Word forward/back
+  - [ ] Beginning/end of query
+- [ ] Add help screen with search syntax guide
 - [ ] Ensure that search debounce is working correctly
+- [ ] Show all items that fit within the current window
+- [ ] Record and show recent queries
 - [ ] Allow toggling between fuzzy and exact search
 - [ ] Allow indexing in another thread
 - [ ] Do indexing in background thread
+- [ ] Add toggle for display of snippets
+- [ ] Add highlighting of terms in title
+- [ ] Add toggle for fuzzy search
 - [ ] Add garbage collection for tantivy store after indexing completes
+- [ ] Allow clearing of search indexes via a CLI flag
+- [ ] Add more file types for indexing
+- [ ] Add file type converters
+  - [ ] HTML to Markdown so we can search only content
+  - [ ] OCR for images
+  - [ ] Speech to text for audio
 
 ### Future Features
 

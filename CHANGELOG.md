@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## v0.1.0 (2025-10-16)
 
+<csr-id-008a3c24b0d906daa743d26cd9de8f57a0375a9e/>
+<csr-id-3a19f067ad3403a14b9a0160c572fa71324f1db1/>
+<csr-id-faa9ac25570629142e2f43ef5f32a5474cde5d98/>
+<csr-id-118b653150f2b3a712c8622fce84c9e2efafc1c0/>
+<csr-id-fbb32f53eb8ddf668f9be93143c13d601364058c/>
+<csr-id-abb3c1cd9f232f4a018b8e273477843c718366e0/>
+<csr-id-d3645e1695b5d060521aaffe10c7b1cede52b501/>
+
 ### New Features
 
  - <csr-id-28c2d70032dc5ec26b4dfc82b215d54d44a97d52/> Hold Alt to open/reveal without quit
@@ -52,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 49 commits contributed to the release over the course of 17 calendar days.
+ - 50 commits contributed to the release over the course of 17 calendar days.
  - 26 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -63,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Add auto-generated changelog ([`620f97f`](https://github.com/symplasma/retsyn/commit/620f97f8e37fe4849587f91230b8d2d609361987))
     - Add missing cargo metadata ([`b8fa75d`](https://github.com/symplasma/retsyn/commit/b8fa75d1ffe46a697d7debe8ce13dc6b59418e2e))
     - Add license and status ([`f5e3ddd`](https://github.com/symplasma/retsyn/commit/f5e3ddd181862816e132ed30fc60a09ca7376dd7))
     - Add more features ([`71c8ee7`](https://github.com/symplasma/retsyn/commit/71c8ee7f2ea0dac7e1212e280ab20afbdb43bc53))

@@ -146,7 +146,8 @@ impl FulltextIndex {
         for dir in &self.markdown_files {
             for result in Walk::new(dir) {
                 match result {
-                    // TODO replace the
+                    // TODO switch to the tracing crate
+                    Err(e) => println!("could not open path: {}", e),
                     Ok(entry) => {
                         if entry.file_type().map(|e| e.is_file()).unwrap_or(false) {
                             // the file path on disk
@@ -160,37 +161,58 @@ impl FulltextIndex {
                                 IndexRecordOption::Basic,
                             );
 
-                            // see if the document is already present in the index
-                            if let Ok(count) = searcher.search(&query, &Count) {
-                                if count > 0 {
-                                    let mut entry_needs_update = false;
+                            let mut entry_up_to_date = false;
 
-                                    // if the last_indexing_epoch is Some and the file's last update time is later than it, then delete the entry from the index by path
-                                    // only check the update time if the item is already in the database
-                                    if let Some(last_indexing_epoch) = self.last_indexing_epoch {
-                                        if let Ok(metadata) = entry.metadata() {
-                                            // TODO do we need to check created time if this field is empty?
-                                            if let Ok(file_modified) = metadata.modified() {
-                                                if file_modified > last_indexing_epoch {
-                                                    let doc_path_term =
-                                                        Term::from_field_text(path, &entry_path);
-                                                    println!(
-                                                        "deleting file from index: {}",
-                                                        entry_path
-                                                    );
-                                                    index_writer.delete_term(doc_path_term);
-                                                    entry_needs_update = true;
+                            // see if the document is already present in the index
+                            match searcher.search(&query, &Count) {
+                                Err(e) => println!("error searching for document: {}", e),
+                                Ok(count) => {
+                                    if count < 1 {
+                                        println!("document not found in index: {}", entry_path)
+                                    } else {
+                                        println!("found document in index: {}", &entry_path);
+                                        entry_up_to_date = true;
+
+                                        // if the last_indexing_epoch is Some and the file's last update time is later than it, then delete the entry from the index by path
+                                        // only check the update time if the item is already in the database
+                                        match self.last_indexing_epoch {
+                                            None => println!("last indexing epoch is not set"),
+                                            Some(last_indexing_epoch) => match entry.metadata() {
+                                                Err(e) => {
+                                                    println!("could not get metadata: {}", e)
                                                 }
-                                            }
+                                                Ok(metadata) => match metadata.modified() {
+                                                    Err(e) => println!(
+                                                        "could not get modification date: {}",
+                                                        e
+                                                    ),
+                                                    Ok(file_modified) => {
+                                                        if file_modified > last_indexing_epoch {
+                                                            let doc_path_term =
+                                                                Term::from_field_text(
+                                                                    path,
+                                                                    &entry_path,
+                                                                );
+                                                            println!(
+                                                                "deleting file from index: {}",
+                                                                entry_path
+                                                            );
+                                                            index_writer.delete_term(doc_path_term);
+                                                            entry_up_to_date = false;
+                                                        }
+                                                    }
+                                                },
+                                            },
                                         }
                                     }
-
-                                    // if the entry does not need an update, continue with the next item
-                                    if !entry_needs_update {
-                                        continue;
-                                    };
                                 }
                             }
+
+                            // if the entry does not need an update, continue with the next item
+                            if entry_up_to_date {
+                                println!("skipping document: {}", &entry_path);
+                                continue;
+                            };
 
                             // TODO set title here based on file type and index source
                             let title_text = entry.path().to_string_lossy();
@@ -207,7 +229,7 @@ impl FulltextIndex {
 
                             // add the document to the index
                             match index_writer.add_document(tantivy_doc) {
-                                Ok(_) => println!("{}", &entry_path),
+                                Ok(_) => println!("adding document to index: {}", &entry_path),
                                 // TODO switch to the tracing crate
                                 Err(e) => {
                                     println!("could not index document: {}: {}", entry_path, e)
@@ -215,8 +237,6 @@ impl FulltextIndex {
                             }
                         }
                     }
-                    // TODO switch to the tracing crate
-                    Err(e) => println!("could not open path: {}", e),
                 }
             }
         }

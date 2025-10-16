@@ -11,7 +11,10 @@ use tantivy::{
     collector::{Count, TopDocs},
     directory::{ManagedDirectory, MmapDirectory},
     query::{QueryParser, TermQuery},
-    schema::{DateOptions, INDEXED, IndexRecordOption, STORED, Schema, TEXT},
+    schema::{
+        DateOptions, INDEXED, IndexRecordOption, STORED, Schema, TEXT, TextFieldIndexing,
+        TextOptions,
+    },
     snippet::SnippetGenerator,
 };
 use time::OffsetDateTime;
@@ -46,6 +49,16 @@ impl FulltextIndex {
     pub(crate) fn new(config: &Conf) -> Result<Self, TantivyError> {
         // setup the schema
         let mut schema_builder = Schema::builder();
+        // the filepath, we're setting up custom options so we can reliably search paths
+        let text_field_indexing = TextFieldIndexing::default()
+            // we do NOT want the field tokenized
+            .set_tokenizer("raw")
+            .set_index_option(IndexRecordOption::Basic);
+        let text_options = TextOptions::default()
+            .set_indexing_options(text_field_indexing)
+            .set_stored();
+        schema_builder.add_text_field(PATH, text_options);
+
         // add the source, the module that discovered this file
         schema_builder.add_text_field(SOURCE, TEXT | STORED);
         // add the indexed at field
@@ -54,8 +67,6 @@ impl FulltextIndex {
             .set_fast()
             .set_precision(tantivy::schema::DateTimePrecision::Seconds);
         schema_builder.add_date_field(INDEXED_AT, date_opts);
-        // the filename
-        schema_builder.add_text_field(PATH, TEXT | STORED);
         // the title of the file
         schema_builder.add_text_field(TITLE, TEXT | STORED);
         // the main text of the file
@@ -260,19 +271,12 @@ impl FulltextIndex {
         let schema = self.index.schema();
         let path_field = schema.get_field(PATH).unwrap();
 
-        // let query_text = &path.iter().last().map(|p| p.to_string_lossy()).unwrap();
-        // print!("searching for query text: {}", query_text);
-        // let query = TermQuery::new(
-        //     Term::from_field_text(path_field, query_text),
-        //     IndexRecordOption::Basic,
-        // );
-
-        let query_text = &path.iter().last().map(|p| p.to_string_lossy()).unwrap();
-        let query_parser = QueryParser::for_index(&self.index, vec![path_field]);
-        let query_string = format!("\"{}\"", query_text);
-        let query = query_parser.parse_query(&query_string).unwrap();
-
-        // dbg!(&query);
+        // TODO may want to call a custom method so this doesn't get out of sync between indexing and our search here
+        let query_text = &path.to_string_lossy();
+        let query = TermQuery::new(
+            Term::from_field_text(path_field, query_text),
+            IndexRecordOption::Basic,
+        );
 
         let searcher = self.reader.searcher();
 

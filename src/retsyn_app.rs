@@ -162,6 +162,11 @@ impl RetsynApp {
                 // TODO find out why we need to negate shift for correct behavior here
                 let shift_held = !(ctx.input(|i| i.modifiers.shift));
                 self.open_item(index, shift_held);
+
+                let alt_held = ctx.input(|i| i.modifiers.alt);
+                if !alt_held {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                }
             }
         }
     }

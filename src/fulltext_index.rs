@@ -130,6 +130,25 @@ impl FulltextIndex {
         })
     }
 
+    /// Clear the search index by removing the index directory and epoch file
+    pub fn clear_index() -> std::io::Result<()> {
+        let index_path = PROJECT_DIRS.cache_dir().join("tantivy");
+        
+        // Remove the index directory if it exists
+        if index_path.exists() {
+            fs::remove_dir_all(&index_path)?;
+            println!("Removed index directory: {}", index_path.display());
+        }
+
+        // Remove the indexing epoch file if it exists
+        if INDEXING_EPOCH_PATH.exists() {
+            fs::remove_file(&*INDEXING_EPOCH_PATH)?;
+            println!("Removed indexing epoch file: {}", INDEXING_EPOCH_PATH.display());
+        }
+
+        Ok(())
+    }
+
     /// Updates the fulltext index
     pub(crate) fn update(&self) -> Result<(), TantivyError> {
         let mut index_writer = self

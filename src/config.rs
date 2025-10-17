@@ -1,4 +1,5 @@
 use confique::Config;
+use confique::toml;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -6,7 +7,7 @@ use std::path::PathBuf;
 pub(crate) type PathList = Vec<PathBuf>;
 
 #[derive(Config)]
-pub(crate) struct Conf {
+pub struct Conf {
     /// Directories containing loose markdown files to index
     #[config(default = ["~/Markor"])]
     pub(crate) markdown_files: PathList,
@@ -36,7 +37,7 @@ impl Conf {
         }
 
         // Generate the default config template
-        let template = toml::template::<Conf>(confique::FormatOptions::default());
+        let template = toml::template::<Conf>(confique::toml::FormatOptions::default());
 
         // Write to file
         fs::write(&config_path, template)?;

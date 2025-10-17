@@ -38,7 +38,7 @@ const PATH: &str = "path";
 const TITLE: &str = "title";
 const BODY: &str = "body";
 
-pub(crate) struct FulltextIndex {
+pub struct FulltextIndex {
     last_indexing_epoch: Option<OffsetDateTime>,
     markdown_files: PathList,
     index: Index,
@@ -133,7 +133,7 @@ impl FulltextIndex {
     /// Clear the search index by removing the index directory and epoch file
     pub fn clear_index() -> std::io::Result<()> {
         let index_path = PROJECT_DIRS.cache_dir().join("tantivy");
-        
+
         // Remove the index directory if it exists
         if index_path.exists() {
             fs::remove_dir_all(&index_path)?;
@@ -143,7 +143,10 @@ impl FulltextIndex {
         // Remove the indexing epoch file if it exists
         if INDEXING_EPOCH_PATH.exists() {
             fs::remove_file(&*INDEXING_EPOCH_PATH)?;
-            println!("Removed indexing epoch file: {}", INDEXING_EPOCH_PATH.display());
+            println!(
+                "Removed indexing epoch file: {}",
+                INDEXING_EPOCH_PATH.display()
+            );
         }
 
         Ok(())

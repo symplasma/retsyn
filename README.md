@@ -26,6 +26,8 @@ This is a list of features. Implemented features are checked, the rest are plann
 - [x] Show snippets for items
 - [x] Allow updates for items in the full text index
 - [x] Allow incremental updates to the index
+- [ ] Ask the user for config info on first launch
+- [ ] Configuration screen
 - [ ] Add better navigation
   - [x] Clear query via `Ctrl+u` or `Esc`
   - [x] Clear to end of query via `Ctrl+k`
@@ -48,15 +50,18 @@ This is a list of features. Implemented features are checked, the rest are plann
   - [ ] HTML to Markdown so we can search only content
   - [ ] OCR for images
   - [ ] Speech to text for audio
+- [ ] Add scoping based on item source
+- [ ] Ensure that queries allow for powerful searches
+- [ ] Add more indexing sources and types
 
 ### Future Features
 
-- [ ] Add the link database
-- [ ] Add phonetic search
-- [ ] Add vector search based on embeddings
+- [ ] Add the link database, probably sqlite
+- [ ] Add phonetic search e.g. [rphonetic](https://lib.rs/crates/rphonetic): Rust port of phonetic Apache commons-codec algorithms
+- [ ] Add vector search based on embeddings e.g.
+  - [ck-search](https://lib.rs/crates/ck-search): Semantic grep by embedding - find code by meaning, not just keywords
+  - [fastembed](https://lib.rs/crates/fastembed): Library for generating vector embeddings, reranking locally.
 - [ ] Merge/deduplicate multiple hits on the same item from different indexes
-- [ ] Add scoping based on item source
-- [ ] Ensure that queries allow for powerful searches
 - [ ] Add item ranking for all sources
 - [ ] Add custom item ranking algorithm
-- [ ] Add more indexing sources and types
+- [ ] Add auto re-ranking based on user guidance and examples

@@ -194,6 +194,7 @@ impl RetsynApp {
 
                 response.request_focus();
 
+                // when the snippets button is clicked, toggle the value of `RetsynApp::show_snippets` AI!
                 let button_bar = vec![("Snippets", self.show_snippets), ("Preview", false)];
 
                 // add mode toggles

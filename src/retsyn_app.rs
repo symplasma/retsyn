@@ -9,7 +9,7 @@ use confique::{
     toml::{self, FormatOptions},
 };
 use directories::ProjectDirs;
-use egui::Color32;
+use egui::{Color32, RichText};
 use tantivy::TantivyError;
 
 use crate::{config::Conf, fulltext_index::FulltextIndex, search_result::SearchResult};
@@ -224,7 +224,8 @@ impl RetsynApp {
                     // draw the item header
                     ui.horizontal(|ui| {
                         let is_selected = self.selected_index == Some(idx);
-                        let response = ui.selectable_label(is_selected, item.title());
+                        let response =
+                            ui.selectable_label(is_selected, RichText::new(item.title()).heading());
                         ui.label(item.path());
                         ui.label(item.indexed_at());
 

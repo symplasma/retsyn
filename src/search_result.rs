@@ -80,22 +80,25 @@ impl SearchResult {
             .fill(Color32::from_rgb(240, 240, 240))
             .inner_margin(4.0)
             .show(ui, |ui| {
-                // please add the widget below so it takes the full availabel width via the `add_sized` method AI!
-                ui.horizontal_wrapped(|ui| {
-                    // TODO adjust spacing to make it more visually pleasing
-                    let width =
-                        ui.fonts(|f| f.glyph_width(&TextStyle::Body.resolve(ui.style()), ' '));
-                    ui.spacing_mut().item_spacing.x = width;
+                let available_width = ui.available_width();
+                ui.add_sized([available_width, 0.0], |ui: &mut egui::Ui| {
+                    ui.horizontal_wrapped(|ui| {
+                        // TODO adjust spacing to make it more visually pleasing
+                        let width =
+                            ui.fonts(|f| f.glyph_width(&TextStyle::Body.resolve(ui.style()), ' '));
+                        ui.spacing_mut().item_spacing.x = width;
 
-                    let mut start_from = 0;
-                    for fragment_range in self.snippet.highlighted() {
-                        ui.label(&self.snippet.fragment()[start_from..fragment_range.start]);
-                        ui.colored_label(
-                            Color32::BLUE,
-                            &self.snippet.fragment()[fragment_range.clone()],
-                        );
-                        start_from = fragment_range.end;
-                    }
+                        let mut start_from = 0;
+                        for fragment_range in self.snippet.highlighted() {
+                            ui.label(&self.snippet.fragment()[start_from..fragment_range.start]);
+                            ui.colored_label(
+                                Color32::BLUE,
+                                &self.snippet.fragment()[fragment_range.clone()],
+                            );
+                            start_from = fragment_range.end;
+                        }
+                    })
+                    .response
                 });
             });
     }

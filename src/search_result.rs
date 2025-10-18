@@ -80,6 +80,7 @@ impl SearchResult {
             .fill(Color32::from_rgb(240, 240, 240))
             .inner_margin(4.0)
             .show(ui, |ui| {
+                // please add the widget below so it takes the full availabel width via the `add_sized` method AI!
                 ui.horizontal_wrapped(|ui| {
                     // TODO adjust spacing to make it more visually pleasing
                     let width =

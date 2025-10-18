@@ -194,17 +194,22 @@ impl RetsynApp {
 
                 response.request_focus();
 
-                // when the snippets button is clicked, toggle the value of `RetsynApp::show_snippets` AI!
                 let button_bar = vec![("Snippets", self.show_snippets), ("Preview", false)];
 
                 // add mode toggles
                 ui.with_layout(Layout::left_to_right(egui::Align::TOP), |ui| {
                     ui.columns(2, |columns| {
                         for (column, (label, state)) in columns.iter_mut().zip(button_bar) {
-                            column.add_sized(
+                            let button_response = column.add_sized(
                                 [column.available_width(), 0.0],
                                 Button::new(label).selected(state),
                             );
+
+                            if button_response.clicked() {
+                                if label == "Snippets" {
+                                    self.show_snippets = !self.show_snippets;
+                                }
+                            }
                         }
                     });
                 });
@@ -257,7 +262,9 @@ impl RetsynApp {
                     });
 
                     // draw the item snippet
-                    item.draw_snippet(ui, search_result_width);
+                    if self.show_snippets {
+                        item.draw_snippet(ui, search_result_width);
+                    }
                 });
             }
         }

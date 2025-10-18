@@ -9,7 +9,7 @@ use confique::{
     toml::{self, FormatOptions},
 };
 use directories::ProjectDirs;
-use egui::{Button, Color32, Layout, RichText};
+use egui::{Align, Button, Color32, Layout, RichText};
 use tantivy::TantivyError;
 
 use crate::{config::Conf, fulltext_index::FulltextIndex, search_result::SearchResult};
@@ -190,10 +190,6 @@ impl RetsynApp {
                     self.last_input_time = Some(Instant::now());
                 }
 
-                // TODO determine why we have to play these stupid games to get a sane width
-                //      `availadle_width` and `desired_width` seem to be completely useless
-                let search_bar_width = (ui.max_rect().width() * 2.0) - 18.0;
-
                 response.request_focus();
 
                 let button_bar = vec![
@@ -228,44 +224,39 @@ impl RetsynApp {
 
                 let mut clicked_item: Option<(usize, bool)> = None;
 
-                ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
+                let num_columns = if self.show_preview { 2 } else { 1 };
+
+                ui.with_layout(Layout::left_to_right(Align::TOP), |ui| {
+                    ui.columns(num_columns, |columns| {
                         egui::ScrollArea::vertical()
                             .auto_shrink([false, false])
-                            .show(ui, |ui| {
+                            .id_salt("search_results")
+                            .show(&mut columns[0], |ui| {
                                 if self.search_text.is_empty() {
                                     self.draw_recent_queries(ui);
                                 } else {
-                                    self.draw_search_results(
-                                        &mut clicked_item,
-                                        ui,
-                                        search_bar_width,
-                                    );
+                                    self.draw_search_results(&mut clicked_item, ui);
                                 }
                             });
-                    });
 
-                    if self.show_preview {
-                        egui::ScrollArea::vertical()
-                            .auto_shrink([false, false])
-                            .show(ui, |ui| ui.label("preview"));
-                    }
-                })
+                        if self.show_preview {
+                            egui::ScrollArea::vertical()
+                                .id_salt("preview")
+                                .auto_shrink([false, false])
+                                .show(&mut columns[1], |ui| ui.label("preview"));
+                        }
+                    })
+                });
             });
         });
     }
 
-    fn draw_search_results(
-        &mut self,
-        clicked_item: &mut Option<(usize, bool)>,
-        ui: &mut egui::Ui,
-        search_result_width: f32,
-    ) {
+    fn draw_search_results(&mut self, clicked_item: &mut Option<(usize, bool)>, ui: &mut egui::Ui) {
         if let Ok(matched_items) = &self.matched_items {
             for (idx, item) in matched_items.iter().enumerate() {
                 ui.vertical(|ui| {
                     // draw the item header
-                    ui.horizontal(|ui| {
+                    ui.horizontal_wrapped(|ui| {
                         let is_selected = self.selected_index == Some(idx);
                         let response =
                             ui.selectable_label(is_selected, RichText::new(item.title()).heading());
@@ -284,7 +275,7 @@ impl RetsynApp {
 
                     // draw the item snippet
                     if self.show_snippets {
-                        item.draw_snippet(ui, search_result_width);
+                        item.draw_snippet(ui);
                     }
                 });
             }

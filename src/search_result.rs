@@ -75,30 +75,28 @@ impl SearchResult {
         &self.title
     }
 
-    pub(crate) fn draw_snippet(&self, ui: &mut egui::Ui, search_result_width: f32) {
+    pub(crate) fn draw_snippet(&self, ui: &mut egui::Ui) {
         Frame::NONE
             .fill(Color32::from_rgb(240, 240, 240))
             .inner_margin(4.0)
             .show(ui, |ui| {
-                ui.add_sized([search_result_width, 0.0], |ui: &mut egui::Ui| {
-                    ui.horizontal_wrapped(|ui| {
-                        // TODO adjust spacing to make it more visually pleasing
-                        let width =
-                            ui.fonts(|f| f.glyph_width(&TextStyle::Body.resolve(ui.style()), ' '));
-                        ui.spacing_mut().item_spacing.x = width;
+                ui.horizontal_wrapped(|ui| {
+                    // TODO adjust spacing to make it more visually pleasing
+                    let width =
+                        ui.fonts(|f| f.glyph_width(&TextStyle::Body.resolve(ui.style()), ' '));
+                    ui.spacing_mut().item_spacing.x = width;
 
-                        let mut start_from = 0;
-                        for fragment_range in self.snippet.highlighted() {
-                            ui.label(&self.snippet.fragment()[start_from..fragment_range.start]);
-                            ui.colored_label(
-                                Color32::BLUE,
-                                &self.snippet.fragment()[fragment_range.clone()],
-                            );
-                            start_from = fragment_range.end;
-                        }
-                    })
-                    .response
-                });
+                    let mut start_from = 0;
+                    for fragment_range in self.snippet.highlighted() {
+                        ui.label(&self.snippet.fragment()[start_from..fragment_range.start]);
+                        ui.colored_label(
+                            Color32::BLUE,
+                            &self.snippet.fragment()[fragment_range.clone()],
+                        );
+                        start_from = fragment_range.end;
+                    }
+                })
+                .response
             });
     }
 

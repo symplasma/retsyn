@@ -75,13 +75,12 @@ impl SearchResult {
         &self.title
     }
 
-    pub(crate) fn draw_snippet(&self, ui: &mut egui::Ui) {
+    pub(crate) fn draw_snippet(&self, ui: &mut egui::Ui, search_result_width: f32) {
         Frame::NONE
             .fill(Color32::from_rgb(240, 240, 240))
             .inner_margin(4.0)
             .show(ui, |ui| {
-                let available_width = ui.available_width();
-                ui.add_sized([available_width, 0.0], |ui: &mut egui::Ui| {
+                ui.add_sized([search_result_width, 0.0], |ui: &mut egui::Ui| {
                     ui.horizontal_wrapped(|ui| {
                         // TODO adjust spacing to make it more visually pleasing
                         let width =

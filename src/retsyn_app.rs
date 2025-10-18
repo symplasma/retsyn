@@ -186,6 +186,10 @@ impl RetsynApp {
                     self.last_input_time = Some(Instant::now());
                 }
 
+                // TODO determine why we have to play these stupid games to get a sane width
+                //      `availadle_width` and `desired_width` seem to be completely useless
+                let search_bar_width = (ui.max_rect().width() * 2.0) - 18.0;
+
                 response.request_focus();
 
                 ui.add_space(10.0);
@@ -201,14 +205,19 @@ impl RetsynApp {
                         if self.search_text.is_empty() {
                             self.draw_recent_queries(ui);
                         } else {
-                            self.draw_search_results(&mut clicked_item, ui);
+                            self.draw_search_results(&mut clicked_item, ui, search_bar_width);
                         }
                     });
             });
         });
     }
 
-    fn draw_search_results(&mut self, clicked_item: &mut Option<(usize, bool)>, ui: &mut egui::Ui) {
+    fn draw_search_results(
+        &mut self,
+        clicked_item: &mut Option<(usize, bool)>,
+        ui: &mut egui::Ui,
+        search_result_width: f32,
+    ) {
         if let Ok(matched_items) = &self.matched_items {
             for (idx, item) in matched_items.iter().enumerate() {
                 ui.vertical(|ui| {
@@ -230,7 +239,7 @@ impl RetsynApp {
                     });
 
                     // draw the item snippet
-                    item.draw_snippet(ui);
+                    item.draw_snippet(ui, search_result_width);
                 });
             }
         }

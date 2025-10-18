@@ -9,7 +9,7 @@ use confique::{
     toml::{self, FormatOptions},
 };
 use directories::ProjectDirs;
-use egui::{Color32, RichText};
+use egui::{Button, Color32, Layout, RichText};
 use tantivy::TantivyError;
 
 use crate::{config::Conf, fulltext_index::FulltextIndex, search_result::SearchResult};
@@ -31,6 +31,7 @@ pub struct RetsynApp {
     recent_queries: Vec<String>,
     scroll_to_selected: bool,
     dark_mode: bool,
+    show_snippets: bool,
     fulltext_index: FulltextIndex,
 }
 
@@ -67,6 +68,7 @@ impl RetsynApp {
             ],
             scroll_to_selected: false,
             dark_mode: false,
+            show_snippets: true,
             fulltext_index,
         })
     }
@@ -191,6 +193,20 @@ impl RetsynApp {
                 let search_bar_width = (ui.max_rect().width() * 2.0) - 18.0;
 
                 response.request_focus();
+
+                let button_bar = vec![("Snippets", self.show_snippets), ("Preview", false)];
+
+                // add mode toggles
+                ui.with_layout(Layout::left_to_right(egui::Align::TOP), |ui| {
+                    ui.columns(2, |columns| {
+                        for (column, (label, state)) in columns.iter_mut().zip(button_bar) {
+                            column.add_sized(
+                                [column.available_width(), 0.0],
+                                Button::new(label).selected(state),
+                            );
+                        }
+                    });
+                });
 
                 ui.add_space(10.0);
                 if let Err(query_error) = &self.matched_items {

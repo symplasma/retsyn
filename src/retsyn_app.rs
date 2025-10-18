@@ -32,6 +32,7 @@ pub struct RetsynApp {
     scroll_to_selected: bool,
     dark_mode: bool,
     show_snippets: bool,
+    show_preview: bool,
     fulltext_index: FulltextIndex,
 }
 
@@ -69,6 +70,7 @@ impl RetsynApp {
             scroll_to_selected: false,
             dark_mode: false,
             show_snippets: true,
+            show_preview: false,
             fulltext_index,
         })
     }
@@ -194,7 +196,10 @@ impl RetsynApp {
 
                 response.request_focus();
 
-                let button_bar = vec![("Snippets", self.show_snippets), ("Preview", false)];
+                let button_bar = vec![
+                    ("Snippets", self.show_snippets),
+                    ("Preview", self.show_preview),
+                ];
 
                 // add mode toggles
                 ui.with_layout(Layout::left_to_right(egui::Align::TOP), |ui| {
@@ -208,6 +213,8 @@ impl RetsynApp {
                             if button_response.clicked() {
                                 if label == "Snippets" {
                                     self.show_snippets = !self.show_snippets;
+                                } else if label == "Preview" {
+                                    self.show_preview = !self.show_preview;
                                 }
                             }
                         }
@@ -221,15 +228,29 @@ impl RetsynApp {
 
                 let mut clicked_item: Option<(usize, bool)> = None;
 
-                egui::ScrollArea::vertical()
-                    .auto_shrink([false, false])
-                    .show(ui, |ui| {
-                        if self.search_text.is_empty() {
-                            self.draw_recent_queries(ui);
-                        } else {
-                            self.draw_search_results(&mut clicked_item, ui, search_bar_width);
-                        }
+                ui.horizontal(|ui| {
+                    ui.vertical(|ui| {
+                        egui::ScrollArea::vertical()
+                            .auto_shrink([false, false])
+                            .show(ui, |ui| {
+                                if self.search_text.is_empty() {
+                                    self.draw_recent_queries(ui);
+                                } else {
+                                    self.draw_search_results(
+                                        &mut clicked_item,
+                                        ui,
+                                        search_bar_width,
+                                    );
+                                }
+                            });
                     });
+
+                    if self.show_preview {
+                        egui::ScrollArea::vertical()
+                            .auto_shrink([false, false])
+                            .show(ui, |ui| ui.label("preview"));
+                    }
+                })
             });
         });
     }

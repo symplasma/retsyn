@@ -3,6 +3,7 @@ use ignore::Walk;
 use std::{
     fs::{self, create_dir_all},
     io::Write,
+    ops::ControlFlow,
     path::{Path, PathBuf},
     sync::LazyLock,
 };
@@ -182,52 +183,18 @@ impl FulltextIndex {
                     // TODO switch to the tracing crate
                     Err(e) => println!("could not open path: {}", e),
                     Ok(entry) => {
-                        if entry.file_type().map(|e| e.is_file()).unwrap_or(false) {
-                            // the file path on disk
-                            // TODO we'll need to modify this or add a volume identifier if we index from more than one host
-                            let entry_path = entry.path().to_string_lossy();
-
-                            let mut entry_up_to_date = false;
-
-                            // see if the document is already present in the index
-                            if self.file_is_indexed(entry.path()) {
-                                // println!("found document in index: {}", &entry_path);
-                                // if the last_indexing_epoch is Some and the file's last update time is later than it, then delete the entry from the index by path
-                                entry_up_to_date = self.entry_up_to_date(&entry);
-
-                                // only check the update time if the item is already in the database
-                                if !entry_up_to_date {
-                                    let doc_path_term = Term::from_field_text(path, &entry_path);
-                                    index_writer.delete_term(doc_path_term);
-                                }
-                            }
-
-                            // if the entry does not need an update, continue with the next item
-                            if entry_up_to_date {
-                                continue;
-                            };
-
-                            // TODO set title here based on file type and index source
-                            let title_text = entry.path().to_string_lossy();
-                            // TODO properly handle non UTF-8 file contents
-                            let body_text = fs::read_to_string(entry.path()).unwrap_or_default();
-
-                            // we were using the `doc!()` macro, but it doesn't seem to play well with date fields
-                            let mut tantivy_doc = TantivyDocument::default();
-                            tantivy_doc.add_text(source, source_str);
-                            tantivy_doc.add_date(indexed_at, indexed_at_time);
-                            tantivy_doc.add_text(path, entry_path.clone());
-                            tantivy_doc.add_text(title, title_text);
-                            tantivy_doc.add_text(body, body_text);
-
-                            // add the document to the index
-                            match index_writer.add_document(tantivy_doc) {
-                                Ok(_) => println!("adding document to index: {}", &entry_path),
-                                // TODO switch to the tracing crate
-                                Err(e) => {
-                                    println!("could not index document: {}: {}", entry_path, e)
-                                }
-                            }
+                        if let ControlFlow::Break(_) = self.update_entry(
+                            &index_writer,
+                            source,
+                            indexed_at,
+                            path,
+                            title,
+                            body,
+                            source_str,
+                            indexed_at_time,
+                            entry,
+                        ) {
+                            continue;
                         }
                     }
                 }
@@ -249,6 +216,68 @@ impl FulltextIndex {
             .expect("should be able to write to the indexing epoch file");
 
         Ok(())
+    }
+
+    fn update_entry(
+        &self,
+        index_writer: &tantivy::IndexWriter,
+        source: tantivy::schema::Field,
+        indexed_at: tantivy::schema::Field,
+        path: tantivy::schema::Field,
+        title: tantivy::schema::Field,
+        body: tantivy::schema::Field,
+        source_str: &'static str,
+        indexed_at_time: DateTime,
+        entry: ignore::DirEntry,
+    ) -> ControlFlow<()> {
+        if entry.file_type().map(|e| e.is_file()).unwrap_or(false) {
+            // the file path on disk
+            // TODO we'll need to modify this or add a volume identifier if we index from more than one host
+            let entry_path = entry.path().to_string_lossy();
+
+            let mut entry_up_to_date = false;
+
+            // see if the document is already present in the index
+            if self.file_is_indexed(entry.path()) {
+                // println!("found document in index: {}", &entry_path);
+                // if the last_indexing_epoch is Some and the file's last update time is later than it, then delete the entry from the index by path
+                entry_up_to_date = self.entry_up_to_date(&entry);
+
+                // only check the update time if the item is already in the database
+                if !entry_up_to_date {
+                    let doc_path_term = Term::from_field_text(path, &entry_path);
+                    index_writer.delete_term(doc_path_term);
+                }
+            }
+
+            // if the entry does not need an update, continue with the next item
+            if entry_up_to_date {
+                return ControlFlow::Break(());
+            };
+
+            // TODO set title here based on file type and index source
+            let title_text = entry.path().to_string_lossy();
+            // TODO properly handle non UTF-8 file contents
+            let body_text = fs::read_to_string(entry.path()).unwrap_or_default();
+
+            // we were using the `doc!()` macro, but it doesn't seem to play well with date fields
+            let mut tantivy_doc = TantivyDocument::default();
+            tantivy_doc.add_text(source, source_str);
+            tantivy_doc.add_date(indexed_at, indexed_at_time);
+            tantivy_doc.add_text(path, entry_path.clone());
+            tantivy_doc.add_text(title, title_text);
+            tantivy_doc.add_text(body, body_text);
+
+            // add the document to the index
+            match index_writer.add_document(tantivy_doc) {
+                Ok(_) => println!("adding document to index: {}", &entry_path),
+                // TODO switch to the tracing crate
+                Err(e) => {
+                    println!("could not index document: {}: {}", entry_path, e)
+                }
+            }
+        }
+        ControlFlow::Continue(())
     }
 
     pub(crate) fn search(

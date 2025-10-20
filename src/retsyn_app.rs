@@ -21,7 +21,6 @@ pub(crate) static PROJECT_DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
 type SearchResultList = Vec<SearchResult>;
 
 pub struct RetsynApp {
-    config: Conf,
     search_text: String,
     last_search_text: String,
     matched_items: Result<SearchResultList, TantivyError>,
@@ -50,12 +49,11 @@ impl RetsynApp {
             }
         };
 
-        let mut fulltext_index = FulltextIndex::new(&config)?;
+        let mut fulltext_index = FulltextIndex::new(config)?;
         // TODO need to move this into a separate thread
         fulltext_index.update()?;
 
         Ok(Self {
-            config,
             search_text: String::new(),
             last_search_text: String::new(),
             matched_items: Ok(Vec::new()),

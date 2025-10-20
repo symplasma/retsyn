@@ -4,7 +4,8 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
     sync::{LazyLock, mpsc::channel},
-    thread::spawn,
+    thread::{self, spawn},
+    time::Duration,
 };
 use tantivy::{
     DateTime, Index, IndexReader, IndexSettings, IndexWriter, ReloadPolicy, TantivyDocument,
@@ -21,12 +22,9 @@ use tantivy::{
 use time::OffsetDateTime;
 
 use crate::{
-    collectors::markdown_files::{MARKDOWN_FILES_SOURCE, MarkdownFiles},
+    collectors::markdown_files::MarkdownFiles,
     config::Conf,
-    index_entry::index_entry::{
-        IndexEntry, IndexEntryReceiver, IndexEntrySender, IndexPath, IndexPathReceiver,
-        IndexPathSender,
-    },
+    index_entry::index_entry::{IndexEntry, IndexPathReceiver, IndexPathSender},
     retsyn_app::PROJECT_DIRS,
     search_result::SearchResult,
 };
@@ -45,6 +43,7 @@ const TITLE: &str = "title";
 const BODY: &str = "body";
 
 pub struct FulltextIndex {
+    config: Conf,
     last_indexing_epoch: Option<OffsetDateTime>,
     index: Index,
     schema: Schema,
@@ -55,15 +54,15 @@ pub struct FulltextIndex {
     path_field: TantivyField,
     title_field: TantivyField,
     body_field: TantivyField,
-    path_sender: IndexPathSender,
-    path_receiver: IndexPathReceiver,
-    entry_sender: IndexEntrySender,
-    entry_receiver: IndexEntryReceiver,
+    // path_sender: IndexPathSender,
+    // path_receiver: IndexPathReceiver,
+    // entry_sender: IndexEntrySender,
+    // entry_receiver: IndexEntryReceiver,
     // markdown_files: MarkdownFiles,
 }
 
 impl FulltextIndex {
-    pub(crate) fn new(config: &Conf) -> Result<Self, TantivyError> {
+    pub(crate) fn new(config: Conf) -> Result<Self, TantivyError> {
         // setup the schema
         let mut schema_builder = Schema::builder();
         // the filepath, we're setting up custom options so we can reliably search paths
@@ -144,19 +143,8 @@ impl FulltextIndex {
         let title_field = schema.get_field(TITLE).unwrap();
         let body_field = schema.get_field(BODY).unwrap();
 
-        let (path_sender, path_receiver) = channel();
-        let (entry_sender, entry_receiver) = channel();
-
-        // spawn loader channels here
-        let markdown_files = MarkdownFiles::new(path_sender.clone(), &config.markdown_files);
-
-        // start collecting various entries in separate threads here
-        println!("spawning markdown file entry collection...");
-        spawn(move || {
-            markdown_files.collect_entries();
-        });
-
         Ok(Self {
+            config,
             last_indexing_epoch,
             index,
             schema,
@@ -167,10 +155,10 @@ impl FulltextIndex {
             path_field,
             title_field,
             body_field,
-            path_sender,
-            path_receiver,
-            entry_sender,
-            entry_receiver,
+            // path_sender,
+            // path_receiver,
+            // entry_sender,
+            // entry_receiver,
             // markdown_files,
         })
     }
@@ -206,9 +194,13 @@ impl FulltextIndex {
     }
 
     /// Loop over the paths that the collectors have found, see if they are indexed and up to date. If so pass them on to the loader.
-    pub(crate) fn convert_paths_to_entries(&self) {
+    pub(crate) fn filter_paths_to_update(
+        &self,
+        path_receiver: IndexPathReceiver,
+        path_converter_sender: IndexPathSender,
+    ) {
         println!("converting paths to entries...");
-        for index_path in &self.path_receiver {
+        for index_path in path_receiver {
             // the file path on disk
             // TODO we'll need to modify this or add a volume identifier if we index from more than one host
             let path = index_path.path();
@@ -233,28 +225,12 @@ impl FulltextIndex {
                 continue;
             };
 
-            let new_entry = match index_path {
-                IndexPath::MarkdownFile(path_buf) => {
-                    // collect necessary data, create an IndexEntry and send it to the indexer
-                    // TODO set title here based on file type and index source
-                    let title = path_buf.to_string_lossy();
-                    // TODO properly handle non UTF-8 file contents
-                    // TODO handle very large files efficiently
-                    let body = fs::read_to_string(&path_buf).unwrap_or_default();
-
-                    IndexEntry::new(
-                        MARKDOWN_FILES_SOURCE.to_owned(),
-                        path_buf.to_string_lossy().to_string(),
-                        title.to_string(),
-                        body,
-                    )
-                }
-            };
-
-            self.entry_sender
-                .send(new_entry)
-                .expect("should be able to send new entry to indexer");
+            path_converter_sender
+                .send(index_path)
+                .expect("should be able to send path to converter");
         }
+
+        drop(path_converter_sender);
     }
 
     /// Updates the fulltext index by reading the IndexEntries from the receiver
@@ -266,11 +242,40 @@ impl FulltextIndex {
         let indexing_epoch_file = AtomicFile::new(&*INDEXING_EPOCH_PATH, AllowOverwrite);
         let indexing_epoch = OffsetDateTime::now_utc().unix_timestamp();
 
-        self.convert_paths_to_entries();
+        let (path_sender, path_receiver) = channel();
+        let (path_converter_sender, path_converter_receiver) = channel();
+        let (entry_sender, entry_receiver) = channel();
 
-        // TODO loop through all of the IndexEntries on the receiver and add them to the index
-        for entry in &self.entry_receiver {
-            self.update_entry(&entry)
+        // spawn loader channels here
+        let markdown_files = MarkdownFiles::new(&self.config.markdown_files);
+
+        // start collecting various entries in separate threads here
+        println!("spawning markdown file entry collection...");
+        spawn(move || {
+            markdown_files.collect_entries(path_sender);
+        });
+
+        // this is basically happening synchronously here since it depends on the tantivy index
+        // might need to wrap the indexes in Arcs and possibly Mutexes to make this asynchronous
+        self.filter_paths_to_update(path_receiver, path_converter_sender);
+
+        spawn(move || {
+            MarkdownFiles::convert_paths_to_entries(path_converter_receiver, entry_sender)
+        });
+
+        // loop through all of the IndexEntries on the receiver and add them to the index
+        loop {
+            // TODO consider switching this back to a normal iter call unless we want to commit in batches
+            match entry_receiver.try_recv() {
+                Ok(entry) => self.update_entry(&entry),
+                Err(e) => match e {
+                    std::sync::mpsc::TryRecvError::Empty => {
+                        thread::sleep(Duration::from_millis(20));
+                        continue;
+                    }
+                    std::sync::mpsc::TryRecvError::Disconnected => break,
+                },
+            }
         }
 
         // commit the changes so that searchers can see the changes

@@ -1,6 +1,12 @@
 use std::path::PathBuf;
 
-// AI! Create an `IndexEntry` trait with the following methods: source, indexed_at, path, title, body
+pub(crate) trait IndexEntry {
+    fn source(&self) -> &str;
+    fn indexed_at(&self) -> time::OffsetDateTime;
+    fn path(&self) -> &PathBuf;
+    fn title(&self) -> String;
+    fn body(&self) -> String;
+}
 
 pub(crate) enum IndexEntry {
     MarkdownFile(PathBuf),

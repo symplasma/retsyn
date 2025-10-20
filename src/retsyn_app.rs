@@ -32,6 +32,7 @@ pub struct RetsynApp {
     dark_mode: bool,
     show_snippets: bool,
     show_preview: bool,
+    show_help: bool,
     fulltext_index: FulltextIndex,
 }
 
@@ -69,6 +70,7 @@ impl RetsynApp {
             dark_mode: false,
             show_snippets: true,
             show_preview: false,
+            show_help: false,
             fulltext_index,
         })
     }
@@ -173,8 +175,123 @@ impl RetsynApp {
         }
     }
 
+    fn draw_help_screen(&mut self, ui: &mut egui::Ui) {
+        ui.vertical_centered(|ui| {
+            ui.heading(RichText::new("Retsyn Help").size(24.0));
+            ui.add_space(20.0);
+        });
+
+        egui::ScrollArea::vertical()
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                ui.group(|ui| {
+                    ui.heading("Keyboard Shortcuts");
+                    ui.add_space(10.0);
+
+                    let shortcuts = vec![
+                        ("Ctrl+H or Ctrl+?", "Show/hide this help screen"),
+                        ("Ctrl+U", "Clear search text"),
+                        ("Escape", "Clear search or close window"),
+                        ("Ctrl+Q / Ctrl+W / Ctrl+C / Ctrl+D", "Close window"),
+                        ("↑ / ↓", "Navigate through search results"),
+                        ("Home / End", "Jump to first/last result"),
+                        ("Enter", "Open selected item's parent directory"),
+                        ("Shift+Enter", "Open selected item directly"),
+                        ("Alt+Enter", "Open item and keep window open"),
+                    ];
+
+                    for (key, description) in shortcuts {
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(key).strong().monospace());
+                            ui.label("—");
+                            ui.label(description);
+                        });
+                    }
+                });
+
+                ui.add_space(20.0);
+
+                ui.group(|ui| {
+                    ui.heading("Search Syntax");
+                    ui.add_space(10.0);
+
+                    ui.label("Retsyn uses Tantivy's query parser for full-text search.");
+                    ui.add_space(10.0);
+
+                    let syntax_examples = vec![
+                        ("simple query", "Search for documents containing these words"),
+                        ("\"exact phrase\"", "Search for an exact phrase"),
+                        ("term1 AND term2", "Both terms must be present"),
+                        ("term1 OR term2", "Either term must be present"),
+                        ("term1 NOT term2", "First term present, second term absent"),
+                        ("title:keyword", "Search only in the title field"),
+                        ("body:keyword", "Search only in the body field"),
+                        ("path:keyword", "Search only in the file path"),
+                        ("term*", "Wildcard search (prefix matching)"),
+                        ("term~", "Fuzzy search (finds similar terms)"),
+                    ];
+
+                    for (syntax, description) in syntax_examples {
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(syntax).code());
+                            ui.label("—");
+                            ui.label(description);
+                        });
+                    }
+
+                    ui.add_space(10.0);
+                    ui.label(RichText::new("Examples:").strong());
+                    ui.add_space(5.0);
+
+                    let examples = vec![
+                        "rust programming",
+                        "\"design patterns\"",
+                        "title:architecture AND body:microservices",
+                        "path:*/2024/* meeting",
+                    ];
+
+                    for example in examples {
+                        ui.horizontal(|ui| {
+                            ui.label("•");
+                            ui.label(RichText::new(example).code());
+                        });
+                    }
+                });
+
+                ui.add_space(20.0);
+
+                ui.group(|ui| {
+                    ui.heading("UI Controls");
+                    ui.add_space(10.0);
+
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Snippets button").strong());
+                        ui.label("—");
+                        ui.label("Toggle display of search result snippets");
+                    });
+
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Preview button").strong());
+                        ui.label("—");
+                        ui.label("Toggle preview pane (coming soon)");
+                    });
+                });
+
+                ui.add_space(20.0);
+
+                ui.vertical_centered(|ui| {
+                    ui.label(RichText::new("Press Ctrl+H or Escape to close this help screen").italics());
+                });
+            });
+    }
+
     fn draw_main_ui(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
+            if self.show_help {
+                self.draw_help_screen(ui);
+                return;
+            }
+
             ui.vertical(|ui| {
                 ui.add_space(10.0);
 
@@ -298,6 +415,23 @@ impl RetsynApp {
     }
 
     fn handle_key_events(&mut self, ctx: &egui::Context) {
+        // Toggle help screen with Ctrl+H or Ctrl+?
+        if ctx.input(|i| {
+            (i.key_pressed(egui::Key::H) && i.modifiers.ctrl)
+                || (i.key_pressed(egui::Key::Questionmark) && i.modifiers.ctrl)
+        }) {
+            self.show_help = !self.show_help;
+            return;
+        }
+
+        // If help screen is showing, Escape closes it
+        if self.show_help {
+            if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+                self.show_help = false;
+            }
+            return;
+        }
+
         if ctx.input(|i| i.key_pressed(egui::Key::U) && i.modifiers.ctrl)
             && !self.search_text.is_empty()
         {

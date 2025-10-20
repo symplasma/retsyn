@@ -1,27 +1,32 @@
 use atomicwrites::{AtomicFile, OverwriteBehavior::AllowOverwrite};
-use ignore::Walk;
 use std::{
     fs::{self, create_dir_all},
     io::Write,
-    ops::ControlFlow,
     path::{Path, PathBuf},
-    sync::LazyLock,
+    sync::{LazyLock, mpsc::channel},
+    thread::spawn,
 };
 use tantivy::{
-    DateTime, Index, IndexReader, IndexSettings, ReloadPolicy, TantivyDocument, TantivyError, Term,
+    DateTime, Index, IndexReader, IndexSettings, IndexWriter, ReloadPolicy, TantivyDocument,
+    TantivyError, Term,
     collector::{Count, TopDocs},
     directory::{ManagedDirectory, MmapDirectory},
     query::{QueryParser, TermQuery},
     schema::{
-        DateOptions, INDEXED, IndexRecordOption, STORED, Schema, TEXT, TextFieldIndexing,
-        TextOptions,
+        DateOptions, Field as TantivyField, INDEXED, IndexRecordOption, STORED, Schema, TEXT,
+        TextFieldIndexing, TextOptions,
     },
     snippet::SnippetGenerator,
 };
 use time::OffsetDateTime;
 
 use crate::{
-    config::{Conf, PathList},
+    collectors::markdown_files::{MARKDOWN_FILES_SOURCE, MarkdownFiles},
+    config::Conf,
+    index_entry::index_entry::{
+        IndexEntry, IndexEntryReceiver, IndexEntrySender, IndexPath, IndexPathReceiver,
+        IndexPathSender,
+    },
     retsyn_app::PROJECT_DIRS,
     search_result::SearchResult,
 };
@@ -41,9 +46,20 @@ const BODY: &str = "body";
 
 pub struct FulltextIndex {
     last_indexing_epoch: Option<OffsetDateTime>,
-    markdown_files: PathList,
     index: Index,
+    schema: Schema,
     reader: IndexReader,
+    writer: IndexWriter,
+    source_field: TantivyField,
+    indexed_at_field: TantivyField,
+    path_field: TantivyField,
+    title_field: TantivyField,
+    body_field: TantivyField,
+    path_sender: IndexPathSender,
+    path_receiver: IndexPathReceiver,
+    entry_sender: IndexEntrySender,
+    entry_receiver: IndexEntryReceiver,
+    // markdown_files: MarkdownFiles,
 }
 
 impl FulltextIndex {
@@ -106,10 +122,10 @@ impl FulltextIndex {
         let index = if last_indexing_epoch.is_some() {
             println!("opening or creating tantivy index");
             // calling open or create just in case the epoch file exists but the actual index was deleted
-            Index::open_or_create(index_dir, schema)?
+            Index::open_or_create(index_dir, schema.clone())?
         } else {
             println!("creating new tantivy index");
-            Index::create(index_dir, schema, IndexSettings::default())?
+            Index::create(index_dir, schema.clone(), IndexSettings::default())?
         };
 
         // create the reader here
@@ -118,16 +134,44 @@ impl FulltextIndex {
             .reload_policy(ReloadPolicy::OnCommitWithDelay)
             .try_into()?;
 
+        let writer = index
+            .writer(50_000_000)
+            .expect("should be able to obtain an index writer");
+
+        let source_field = schema.get_field(SOURCE).unwrap();
+        let indexed_at_field = schema.get_field(INDEXED_AT).unwrap();
+        let path_field = schema.get_field(PATH).unwrap();
+        let title_field = schema.get_field(TITLE).unwrap();
+        let body_field = schema.get_field(BODY).unwrap();
+
+        let (path_sender, path_receiver) = channel();
+        let (entry_sender, entry_receiver) = channel();
+
+        // spawn loader channels here
+        let markdown_files = MarkdownFiles::new(path_sender.clone(), &config.markdown_files);
+
+        // start collecting various entries in separate threads here
+        println!("spawning markdown file entry collection...");
+        spawn(move || {
+            markdown_files.collect_entries();
+        });
+
         Ok(Self {
             last_indexing_epoch,
-            markdown_files: config
-                .markdown_files
-                .iter()
-                // expand tildes into absolute paths
-                .map(|p| PathBuf::from(shellexpand::tilde(&p.to_string_lossy()).into_owned()))
-                .collect(),
             index,
+            schema,
             reader,
+            writer,
+            source_field,
+            indexed_at_field,
+            path_field,
+            title_field,
+            body_field,
+            path_sender,
+            path_receiver,
+            entry_sender,
+            entry_receiver,
+            // markdown_files,
         })
     }
 
@@ -153,57 +197,85 @@ impl FulltextIndex {
         Ok(())
     }
 
-    /// Updates the fulltext index
-    pub(crate) fn update(&self) -> Result<(), TantivyError> {
-        let mut index_writer = self
-            .index
-            .writer(50_000_000)
-            .expect("should be able to obtain an index writer");
+    /// Delete the given entry from the index by its path
+    ///
+    /// This takes an `&str` since the IndexEntry has not been constructed yet when this is called.
+    pub(crate) fn delete_entry(&self, entry_path: &str) {
+        let doc_path_term = Term::from_field_text(self.path_field, entry_path);
+        self.writer.delete_term(doc_path_term);
+    }
 
-        let schema = self.index.schema();
-        let source = schema.get_field(SOURCE).unwrap();
-        let indexed_at = schema.get_field(INDEXED_AT).unwrap();
-        let path = schema.get_field(PATH).unwrap();
-        let title = schema.get_field(TITLE).unwrap();
-        let body = schema.get_field(BODY).unwrap();
+    /// Loop over the paths that the collectors have found, see if they are indexed and up to date. If so pass them on to the loader.
+    pub(crate) fn convert_paths_to_entries(&self) {
+        println!("converting paths to entries...");
+        for index_path in &self.path_receiver {
+            // the file path on disk
+            // TODO we'll need to modify this or add a volume identifier if we index from more than one host
+            let path = index_path.path();
+            let path_str = path.to_string_lossy();
 
-        let source_str = "markdown_files";
-        let indexing_date_time = OffsetDateTime::now_utc();
-        // this seems like overly complicated type juggling
-        let indexed_at_time =
-            DateTime::from_primitive(DateTime::from_utc(indexing_date_time).into_primitive());
+            let mut entry_up_to_date = false;
+
+            // see if the document is already present in the index
+            if self.file_is_indexed(path) {
+                // println!("found document in index: {}", &entry_path);
+                // if the last_indexing_epoch is Some and the file's last update time is later than it, then delete the entry from the index by path
+                entry_up_to_date = self.entry_up_to_date(&path);
+
+                // only check the update time if the item is already in the database
+                if !entry_up_to_date {
+                    self.delete_entry(&path_str)
+                }
+            }
+
+            // if the entry does not need an update, continue with the next item
+            if entry_up_to_date {
+                continue;
+            };
+
+            let new_entry = match index_path {
+                IndexPath::MarkdownFile(path_buf) => {
+                    // collect necessary data, create an IndexEntry and send it to the indexer
+                    // TODO set title here based on file type and index source
+                    let title = path_buf.to_string_lossy();
+                    // TODO properly handle non UTF-8 file contents
+                    // TODO handle very large files efficiently
+                    let body = fs::read_to_string(&path_buf).unwrap_or_default();
+
+                    IndexEntry::new(
+                        MARKDOWN_FILES_SOURCE.to_owned(),
+                        path_buf.to_string_lossy().to_string(),
+                        title.to_string(),
+                        body,
+                    )
+                }
+            };
+
+            self.entry_sender
+                .send(new_entry)
+                .expect("should be able to send new entry to indexer");
+        }
+    }
+
+    /// Updates the fulltext index by reading the IndexEntries from the receiver
+    pub(crate) fn update(&mut self) -> Result<(), TantivyError> {
+        println!("updating the fulltext index...");
+        let indexed_at_time = DateTime::from_utc(OffsetDateTime::now_utc());
 
         // setting up the indexing epoch
         let indexing_epoch_file = AtomicFile::new(&*INDEXING_EPOCH_PATH, AllowOverwrite);
-        let indexing_epoch = indexing_date_time.unix_timestamp();
+        let indexing_epoch = OffsetDateTime::now_utc().unix_timestamp();
 
-        for dir in &self.markdown_files {
-            for result in Walk::new(dir) {
-                match result {
-                    // TODO switch to the tracing crate
-                    Err(e) => println!("could not open path: {}", e),
-                    Ok(entry) => {
-                        if let ControlFlow::Break(_) = self.update_entry(
-                            &index_writer,
-                            source,
-                            indexed_at,
-                            path,
-                            title,
-                            body,
-                            source_str,
-                            indexed_at_time,
-                            entry,
-                        ) {
-                            continue;
-                        }
-                    }
-                }
-            }
+        self.convert_paths_to_entries();
+
+        // TODO loop through all of the IndexEntries on the receiver and add them to the index
+        for entry in &self.entry_receiver {
+            self.update_entry(&entry)
         }
 
         // commit the changes so that searchers can see the changes
         println!("committing changes to fulltext index...");
-        index_writer.commit()?;
+        self.writer.commit()?;
 
         // write the epoch of the last indexing to use for incremental updates
         println!(
@@ -218,66 +290,23 @@ impl FulltextIndex {
         Ok(())
     }
 
-    fn update_entry(
-        &self,
-        index_writer: &tantivy::IndexWriter,
-        source: tantivy::schema::Field,
-        indexed_at: tantivy::schema::Field,
-        path: tantivy::schema::Field,
-        title: tantivy::schema::Field,
-        body: tantivy::schema::Field,
-        source_str: &'static str,
-        indexed_at_time: DateTime,
-        entry: ignore::DirEntry,
-    ) -> ControlFlow<()> {
-        if entry.file_type().map(|e| e.is_file()).unwrap_or(false) {
-            // the file path on disk
-            // TODO we'll need to modify this or add a volume identifier if we index from more than one host
-            let entry_path = entry.path().to_string_lossy();
+    fn update_entry(&self, entry: &IndexEntry) {
+        // we were using the `doc!()` macro, but it doesn't seem to play well with date fields
+        let mut tantivy_doc = TantivyDocument::default();
+        tantivy_doc.add_text(self.source_field, entry.source());
+        tantivy_doc.add_date(self.indexed_at_field, *entry.indexed_at());
+        tantivy_doc.add_text(self.path_field, entry.path());
+        tantivy_doc.add_text(self.title_field, entry.title());
+        tantivy_doc.add_text(self.body_field, entry.body());
 
-            let mut entry_up_to_date = false;
-
-            // see if the document is already present in the index
-            if self.file_is_indexed(entry.path()) {
-                // println!("found document in index: {}", &entry_path);
-                // if the last_indexing_epoch is Some and the file's last update time is later than it, then delete the entry from the index by path
-                entry_up_to_date = self.entry_up_to_date(&entry);
-
-                // only check the update time if the item is already in the database
-                if !entry_up_to_date {
-                    let doc_path_term = Term::from_field_text(path, &entry_path);
-                    index_writer.delete_term(doc_path_term);
-                }
-            }
-
-            // if the entry does not need an update, continue with the next item
-            if entry_up_to_date {
-                return ControlFlow::Break(());
-            };
-
-            // TODO set title here based on file type and index source
-            let title_text = entry.path().to_string_lossy();
-            // TODO properly handle non UTF-8 file contents
-            let body_text = fs::read_to_string(entry.path()).unwrap_or_default();
-
-            // we were using the `doc!()` macro, but it doesn't seem to play well with date fields
-            let mut tantivy_doc = TantivyDocument::default();
-            tantivy_doc.add_text(source, source_str);
-            tantivy_doc.add_date(indexed_at, indexed_at_time);
-            tantivy_doc.add_text(path, entry_path.clone());
-            tantivy_doc.add_text(title, title_text);
-            tantivy_doc.add_text(body, body_text);
-
-            // add the document to the index
-            match index_writer.add_document(tantivy_doc) {
-                Ok(_) => println!("adding document to index: {}", &entry_path),
-                // TODO switch to the tracing crate
-                Err(e) => {
-                    println!("could not index document: {}: {}", entry_path, e)
-                }
+        // add the document to the index
+        match self.writer.add_document(tantivy_doc) {
+            Ok(_) => println!("adding document to index: {}", &entry.path()),
+            // TODO switch to the tracing crate
+            Err(e) => {
+                println!("could not index document: {}: {}", &entry.path(), e)
             }
         }
-        ControlFlow::Continue(())
     }
 
     pub(crate) fn search(
@@ -317,7 +346,7 @@ impl FulltextIndex {
         Ok(documents)
     }
 
-    fn file_is_indexed(&self, path: &Path) -> bool {
+    pub(crate) fn file_is_indexed(&self, path: &Path) -> bool {
         let schema = self.index.schema();
         let path_field = schema.get_field(PATH).unwrap();
 
@@ -348,7 +377,7 @@ impl FulltextIndex {
         }
     }
 
-    fn entry_up_to_date(&self, entry: &ignore::DirEntry) -> bool {
+    pub(crate) fn entry_up_to_date(&self, entry: &Path) -> bool {
         match self.last_indexing_epoch {
             None => {
                 println!("last indexing epoch is not set");

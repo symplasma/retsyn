@@ -501,36 +501,50 @@ impl RetsynApp {
 
                 response.request_focus();
 
-                let button_bar = vec![
-                    ("Lenient", self.lenient),
-                    ("Snippets", self.show_snippets),
-                    ("Preview", self.show_preview),
-                    ("Help", false),
-                ];
-
                 // add mode toggles
                 ui.with_layout(Layout::left_to_right(egui::Align::TOP), |ui| {
                     // TODO replace with `columns_const`
-                    ui.columns(button_bar.len(), |columns| {
-                        for (column, (label, state)) in columns.iter_mut().zip(button_bar) {
-                            let button_response = column.add_sized(
-                                [column.available_width(), 0.0],
-                                Button::new(label).selected(state),
-                            );
+                    ui.columns_const(|[lenient_col, snippet_col, preview_col, help_col]| {
+                        if lenient_col
+                            .add_sized(
+                                [lenient_col.available_width(), 0.0],
+                                Button::new("Lenient").selected(self.lenient),
+                            )
+                            .clicked()
+                        {
+                            self.lenient = !self.lenient;
+                            self.update_search();
+                        };
 
-                            if button_response.clicked() {
-                                if label == "Lenient" {
-                                    self.lenient = !self.lenient;
-                                    self.update_search();
-                                } else if label == "Snippets" {
-                                    self.show_snippets = !self.show_snippets;
-                                } else if label == "Preview" {
-                                    self.show_preview = !self.show_preview;
-                                } else if label == "Help" {
-                                    self.show_help = true;
-                                }
-                            }
-                        }
+                        if snippet_col
+                            .add_sized(
+                                [snippet_col.available_width(), 0.0],
+                                Button::new("Snippets").selected(self.show_snippets),
+                            )
+                            .clicked()
+                        {
+                            self.show_snippets = !self.show_snippets;
+                        };
+
+                        if preview_col
+                            .add_sized(
+                                [preview_col.available_width(), 0.0],
+                                Button::new("Preview").selected(self.show_preview),
+                            )
+                            .clicked()
+                        {
+                            self.show_preview = !self.show_preview;
+                        };
+
+                        if help_col
+                            .add_sized(
+                                [help_col.available_width(), 0.0],
+                                Button::new("Help").selected(false),
+                            )
+                            .clicked()
+                        {
+                            self.show_help = true;
+                        };
                     });
                 });
 

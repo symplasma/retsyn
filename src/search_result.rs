@@ -14,6 +14,7 @@ pub(crate) struct SearchResult {
     indexed_at: DateTime,
     path: String,
     title: String,
+    body: Field,
     snippet: Snippet,
     tantivy_doc: TantivyDocument,
 }
@@ -24,6 +25,7 @@ impl SearchResult {
         indexed_at: Field,
         path: Field,
         title: Field,
+        body: Field,
         doc: TantivyDocument,
         snippet: Snippet,
     ) -> Self {
@@ -52,6 +54,7 @@ impl SearchResult {
                 .flatten()
                 .unwrap_or_default()
                 .to_owned(),
+            body,
             snippet,
             tantivy_doc: doc,
         }
@@ -73,6 +76,16 @@ impl SearchResult {
 
     pub(crate) fn title(&self) -> &str {
         &self.title
+    }
+
+    pub(crate) fn body(&self) -> String {
+        // TODO might want to grab this from the file directly rather than storing the whole field
+        self.tantivy_doc
+            .get_first(self.body)
+            .map(|t| t.as_str())
+            .flatten()
+            .unwrap_or_default()
+            .to_owned()
     }
 
     pub(crate) fn draw_snippet(&self, ui: &mut egui::Ui) {
@@ -101,7 +114,7 @@ impl SearchResult {
     }
 
     pub(crate) fn draw_preview_area(&self, ui: &mut egui::Ui) -> egui::Response {
-        ui.label("body text")
+        ui.label(self.body())
     }
 
     pub(crate) fn open(&self) {

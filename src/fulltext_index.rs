@@ -343,6 +343,7 @@ impl FulltextIndex {
                 indexed_at,
                 path,
                 title,
+                body,
                 retrieved_doc,
                 snippet,
             ));

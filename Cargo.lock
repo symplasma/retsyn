@@ -3088,7 +3088,7 @@ dependencies = [
 
 [[package]]
 name = "retsyn"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "atomicwrites",
  "clap",

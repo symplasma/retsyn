@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.3 (2025-10-21)
+
+### Chore
+
+ - <csr-id-23293c7da5d078ed1d5fcebd3f4519b7e2a70fbc/> Clean up tantivy field handling
+ - <csr-id-850f1acd09171676a4a6ab38cab567f7c23bf997/> Improve help screen
+
+### New Features
+
+ - <csr-id-3a4696bd6641e33d2aef7fa80b04215ba0c7b1a8/> Add support for fuzzy search
+ - <csr-id-2f503e2854c6b365b3bf735ebf76e6793f271016/> implement markdown title extraction with frontmatter, h1, and filename fallback
+ - <csr-id-7382a33a041b56eac9a2f44a054ec82d47933fe5/> Add toggle for query leniency
+ - <csr-id-07f1635b2f61f2bd29effe34ba25e9b23b72bf9c/> Add Ctrl+P shortcut to toggle preview pane and update help screen
+
+### Refactor
+
+ - <csr-id-e2e73ef454e1fb2b9b873134f4ea9d11fe5a60e1/> Switch to columns_const
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 7 commits contributed to the release.
+ - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Add support for fuzzy search ([`3a4696b`](https://github.com/symplasma/retsyn/commit/3a4696bd6641e33d2aef7fa80b04215ba0c7b1a8))
+    - Switch to columns_const ([`e2e73ef`](https://github.com/symplasma/retsyn/commit/e2e73ef454e1fb2b9b873134f4ea9d11fe5a60e1))
+    - Clean up tantivy field handling ([`23293c7`](https://github.com/symplasma/retsyn/commit/23293c7da5d078ed1d5fcebd3f4519b7e2a70fbc))
+    - Implement markdown title extraction with frontmatter, h1, and filename fallback ([`2f503e2`](https://github.com/symplasma/retsyn/commit/2f503e2854c6b365b3bf735ebf76e6793f271016))
+    - Improve help screen ([`850f1ac`](https://github.com/symplasma/retsyn/commit/850f1acd09171676a4a6ab38cab567f7c23bf997))
+    - Add toggle for query leniency ([`7382a33`](https://github.com/symplasma/retsyn/commit/7382a33a041b56eac9a2f44a054ec82d47933fe5))
+    - Add Ctrl+P shortcut to toggle preview pane and update help screen ([`07f1635`](https://github.com/symplasma/retsyn/commit/07f1635b2f61f2bd29effe34ba25e9b23b72bf9c))
+</details>
+
 ## v0.1.2 (2025-10-20)
 
 ### New Features
@@ -17,7 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 4 commits contributed to the release.
+ - 5 commits contributed to the release.
  - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -28,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release retsyn v0.1.2 ([`49ff2d9`](https://github.com/symplasma/retsyn/commit/49ff2d947cb9bdf205096e8f55333e6f3e49202f))
     - Enable tooltips for links in preview ([`397e594`](https://github.com/symplasma/retsyn/commit/397e5944a502448568652382717c0376f34f38a2))
     - Improve markdown rendering in preview ([`9ca505e`](https://github.com/symplasma/retsyn/commit/9ca505ee0deb2f50d0a7d80d61efc8d0206ee732))
     - Add document preview ([`1dc7f66`](https://github.com/symplasma/retsyn/commit/1dc7f6686f342c5d0186beeea53177f8d85beddc))

@@ -2,6 +2,7 @@ use std::{
     process::exit,
     sync::LazyLock,
     time::{Duration, Instant},
+    vec,
 };
 
 use confique::{
@@ -12,7 +13,11 @@ use directories::ProjectDirs;
 use egui::{Align, Button, Color32, Layout, RichText};
 use tantivy::TantivyError;
 
-use crate::{config::Conf, fulltext_index::FulltextIndex, search_result::SearchResult};
+use crate::{
+    config::Conf,
+    fulltext_index::{FulltextIndex, SearchResultsAndErrors},
+    search_result::SearchResult,
+};
 
 pub(crate) static PROJECT_DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
     ProjectDirs::from("org", "symplasma", "retsyn").expect("should be able to create project dir")
@@ -23,7 +28,7 @@ type SearchResultList = Vec<SearchResult>;
 pub struct RetsynApp {
     search_text: String,
     last_search_text: String,
-    matched_items: Result<SearchResultList, TantivyError>,
+    matched_items: SearchResultsAndErrors,
     selected_index: Option<usize>,
     last_input_time: Option<Instant>,
     debounce_duration: Duration,
@@ -37,6 +42,7 @@ pub struct RetsynApp {
     config: Conf,
     config_markdown_files: Vec<String>,
     fulltext_index: Option<FulltextIndex>,
+    lenient: bool,
 }
 
 impl RetsynApp {
@@ -74,7 +80,7 @@ impl RetsynApp {
         Ok(Self {
             search_text: String::new(),
             last_search_text: String::new(),
-            matched_items: Ok(Vec::new()),
+            matched_items: Ok((vec![], vec![])),
             selected_index: None,
             last_input_time: None,
             debounce_duration: Duration::from_millis(100),
@@ -92,6 +98,7 @@ impl RetsynApp {
             config,
             config_markdown_files,
             fulltext_index,
+            lenient: true,
         })
     }
 
@@ -101,7 +108,7 @@ impl RetsynApp {
     fn selected_item(&self) -> Option<&SearchResult> {
         match self.selected_index {
             Some(selected_index) => match &self.matched_items {
-                Ok(items) => items.get(selected_index),
+                Ok((items, _errors)) => items.get(selected_index),
                 Err(_) => None,
             },
             None => None,
@@ -110,17 +117,21 @@ impl RetsynApp {
 
     fn clear_search(&mut self) {
         self.search_text.clear();
-        self.matched_items = Ok(Vec::default());
+        self.matched_items = Ok((vec![], vec![]));
         self.selected_index = None;
     }
 
     fn update_search(&mut self) {
         if self.search_text.is_empty() {
-            self.matched_items = Ok(Vec::default());
+            self.matched_items = Ok((vec![], vec![]));
             self.selected_index = None;
         } else if let Some(ref index) = self.fulltext_index {
-            self.matched_items = index.search(&self.search_text, 20);
-            self.selected_index = if self.matched_items.as_ref().is_ok_and(|m| m.is_empty()) {
+            self.matched_items = index.search(&self.search_text, 20, self.lenient);
+            self.selected_index = if self
+                .matched_items
+                .as_ref()
+                .is_ok_and(|(m, _errors)| m.is_empty())
+            {
                 None
             } else {
                 Some(0)
@@ -130,7 +141,7 @@ impl RetsynApp {
     }
 
     fn open_item(&mut self, index: usize, reveal: bool) {
-        if let Ok(matched_items) = &self.matched_items {
+        if let Ok((matched_items, _errors)) = &self.matched_items {
             if index < matched_items.len() {
                 let item = &matched_items[index];
                 if reveal {
@@ -158,7 +169,7 @@ impl RetsynApp {
         let item_count = self
             .matched_items
             .as_ref()
-            .and_then(|m| Ok(m.len()))
+            .and_then(|(m, _errors)| Ok(m.len()))
             .unwrap_or_default();
         if item_count == 0 {
             return;
@@ -467,13 +478,15 @@ impl RetsynApp {
                 response.request_focus();
 
                 let button_bar = vec![
+                    ("Lenient", self.lenient),
                     ("Snippets", self.show_snippets),
                     ("Preview", self.show_preview),
                 ];
 
                 // add mode toggles
                 ui.with_layout(Layout::left_to_right(egui::Align::TOP), |ui| {
-                    ui.columns(2, |columns| {
+                    // TODO replace with `columns_const`
+                    ui.columns(button_bar.len(), |columns| {
                         for (column, (label, state)) in columns.iter_mut().zip(button_bar) {
                             let button_response = column.add_sized(
                                 [column.available_width(), 0.0],
@@ -481,7 +494,10 @@ impl RetsynApp {
                             );
 
                             if button_response.clicked() {
-                                if label == "Snippets" {
+                                if label == "Lenient" {
+                                    self.lenient = !self.lenient;
+                                    self.update_search();
+                                } else if label == "Snippets" {
                                     self.show_snippets = !self.show_snippets;
                                 } else if label == "Preview" {
                                     self.show_preview = !self.show_preview;
@@ -491,9 +507,31 @@ impl RetsynApp {
                     });
                 });
 
+                // draw query errors
                 ui.add_space(10.0);
-                if let Err(query_error) = &self.matched_items {
-                    ui.colored_label(Color32::RED, query_error.to_string());
+                match &self.matched_items {
+                    // show query parsing errors in lenient mode
+                    Ok((_results, query_errors)) => {
+                        let mut indent = String::default();
+                        if query_errors.len() > 0 && self.lenient {
+                            indent = "  ".to_owned();
+                            ui.colored_label(
+                                Color32::RED,
+                                format!("{} query errors", query_errors.len()),
+                            );
+                        }
+                        for query_error in query_errors {
+                            ui.colored_label(
+                                Color32::RED,
+                                format!("{}{}", indent, query_error.to_string()),
+                            );
+                        }
+                    }
+
+                    // some other error during search
+                    Err(query_error) => {
+                        ui.colored_label(Color32::RED, query_error.to_string());
+                    }
                 }
 
                 let mut clicked_item: Option<(usize, bool)> = None;
@@ -531,7 +569,7 @@ impl RetsynApp {
     }
 
     fn draw_search_results(&mut self, clicked_item: &mut Option<(usize, bool)>, ui: &mut egui::Ui) {
-        if let Ok(matched_items) = &self.matched_items {
+        if let Ok((matched_items, errors)) = &self.matched_items {
             for (idx, item) in matched_items.iter().enumerate() {
                 ui.vertical(|ui| {
                     // draw the item header

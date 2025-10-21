@@ -1,5 +1,6 @@
 use atomicwrites::{AtomicFile, OverwriteBehavior::AllowOverwrite};
 use std::{
+    default,
     fs::{self, create_dir_all},
     io::Write,
     path::{Path, PathBuf},
@@ -12,7 +13,7 @@ use tantivy::{
     TantivyError, Term,
     collector::{Count, TopDocs},
     directory::{ManagedDirectory, MmapDirectory},
-    query::{QueryParser, TermQuery},
+    query::{Query, QueryParser, QueryParserError, TermQuery},
     schema::{
         DateOptions, Field as TantivyField, INDEXED, IndexRecordOption, STORED, Schema, TEXT,
         TextFieldIndexing, TextOptions,
@@ -60,6 +61,9 @@ pub struct FulltextIndex {
     // entry_receiver: IndexEntryReceiver,
     // markdown_files: MarkdownFiles,
 }
+
+pub(crate) type SearchResultsAndErrors =
+    Result<(Vec<SearchResult>, Vec<QueryParserError>), TantivyError>;
 
 impl FulltextIndex {
     pub(crate) fn new(config: Conf) -> Result<Self, TantivyError> {
@@ -318,7 +322,8 @@ impl FulltextIndex {
         &self,
         query: &str,
         limit: usize,
-    ) -> Result<Vec<SearchResult>, TantivyError> {
+        lenient: bool,
+    ) -> SearchResultsAndErrors {
         let searcher = self.reader.searcher();
 
         let schema = self.index.schema();
@@ -329,7 +334,15 @@ impl FulltextIndex {
         let body = schema.get_field(BODY).unwrap();
 
         let query_parser = QueryParser::for_index(&self.index, vec![title, body]);
-        let query = query_parser.parse_query(query)?;
+        let (query, query_errors) = if lenient {
+            query_parser.parse_query_lenient(query)
+        } else {
+            match query_parser.parse_query(query) {
+                Ok(query) => (query, vec![]),
+                // if we have an error in non-lenient parsing, return with no results
+                Err(error) => return Ok((vec![], vec![error])),
+            }
+        };
         let top_docs = searcher.search(&query, &TopDocs::with_limit(limit))?;
 
         let snippet_generator = SnippetGenerator::create(&searcher, &query, body)?;
@@ -349,7 +362,7 @@ impl FulltextIndex {
             ));
         }
 
-        Ok(documents)
+        Ok((documents, query_errors))
     }
 
     pub(crate) fn file_is_indexed(&self, path: &Path) -> bool {

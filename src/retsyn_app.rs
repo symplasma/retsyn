@@ -343,6 +343,37 @@ impl RetsynApp {
             .auto_shrink([false, false])
             .show(ui, |ui| {
                 ui.group(|ui| {
+                    ui.heading("UI Controls");
+                    ui.add_space(10.0);
+
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Lenient button").strong());
+                        ui.label("—");
+                        ui.label("Toggle lenient search query parsing");
+                    });
+
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Snippets button").strong());
+                        ui.label("—");
+                        ui.label("Toggle display of search result snippets");
+                    });
+
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Preview button").strong());
+                        ui.label("—");
+                        ui.label("Toggle preview pane");
+                    });
+
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Help button").strong());
+                        ui.label("—");
+                        ui.label("Show this screen");
+                    });
+                });
+
+                ui.add_space(20.0);
+
+                ui.group(|ui| {
                     ui.heading("Keyboard Shortcuts");
                     ui.add_space(10.0);
 
@@ -355,8 +386,8 @@ impl RetsynApp {
                         ("Ctrl+Q / Ctrl+W / Ctrl+C / Ctrl+D", "Close window"),
                         ("↑ / ↓", "Navigate through search results"),
                         ("Home / End", "Jump to first/last result"),
-                        ("Enter", "Open selected item's parent directory"),
-                        ("Shift+Enter", "Open selected item directly"),
+                        ("Enter", "Open selected item directly"),
+                        ("Shift+Enter", "Open selected item's parent directory"),
                         ("Alt+Enter", "Open item and keep window open"),
                     ];
 
@@ -375,23 +406,35 @@ impl RetsynApp {
                     ui.heading("Search Syntax");
                     ui.add_space(10.0);
 
-                    ui.label("Retsyn uses Tantivy's query parser for full-text search.");
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label("Retsyn uses");
+                        ui.hyperlink_to(
+                            "Tantivy's query parser",
+                            "https://docs.rs/tantivy/latest/tantivy/query/struct.QueryParser.html",
+                        );
+                        ui.label("for full-text search.");
+                    });
                     ui.add_space(10.0);
 
                     let syntax_examples = vec![
                         (
                             "simple query",
-                            "Search for documents containing these words",
+                            "Search for documents containing these words in the title or body",
                         ),
-                        ("\"exact phrase\"", "Search for an exact phrase"),
+                        ("\"exact phrase\"", "Search for the exact phrase"),
+                        (
+                            "\"exact phrase\"~2",
+                            "Search for the exact phrase with up to two words between",
+                        ),
                         ("term1 AND term2", "Both terms must be present"),
                         ("term1 OR term2", "Either term must be present"),
-                        ("term1 NOT term2", "First term present, second term absent"),
+                        ("+term1 -term2", "First term present, second term absent"),
                         ("title:keyword", "Search only in the title field"),
                         ("body:keyword", "Search only in the body field"),
                         ("path:keyword", "Search only in the file path"),
-                        ("term*", "Wildcard search (prefix matching)"),
-                        ("term~", "Fuzzy search (finds similar terms)"),
+                        ("title: IN [a b c]", "Search for title is either a, b, or c"),
+                        ("\"term\"*", "Wildcard search (prefix matching)"),
+                        ("term^2.0", "Boost these terms during ranking"),
                     ];
 
                     for (syntax, description) in syntax_examples {
@@ -419,25 +462,6 @@ impl RetsynApp {
                             ui.label(RichText::new(example).code());
                         });
                     }
-                });
-
-                ui.add_space(20.0);
-
-                ui.group(|ui| {
-                    ui.heading("UI Controls");
-                    ui.add_space(10.0);
-
-                    ui.horizontal(|ui| {
-                        ui.label(RichText::new("Snippets button").strong());
-                        ui.label("—");
-                        ui.label("Toggle display of search result snippets");
-                    });
-
-                    ui.horizontal(|ui| {
-                        ui.label(RichText::new("Preview button").strong());
-                        ui.label("—");
-                        ui.label("Toggle preview pane (coming soon)");
-                    });
                 });
 
                 ui.add_space(20.0);
@@ -481,6 +505,7 @@ impl RetsynApp {
                     ("Lenient", self.lenient),
                     ("Snippets", self.show_snippets),
                     ("Preview", self.show_preview),
+                    ("Help", false),
                 ];
 
                 // add mode toggles
@@ -501,6 +526,8 @@ impl RetsynApp {
                                     self.show_snippets = !self.show_snippets;
                                 } else if label == "Preview" {
                                     self.show_preview = !self.show_preview;
+                                } else if label == "Help" {
+                                    self.show_help = true;
                                 }
                             }
                         }

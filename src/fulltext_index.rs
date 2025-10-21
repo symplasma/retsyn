@@ -47,19 +47,13 @@ pub struct FulltextIndex {
     config: Conf,
     last_indexing_epoch: Option<OffsetDateTime>,
     index: Index,
-    schema: Schema,
     reader: IndexReader,
     writer: IndexWriter,
-    source_field: TantivyField,
-    indexed_at_field: TantivyField,
-    path_field: TantivyField,
-    title_field: TantivyField,
-    body_field: TantivyField,
-    // path_sender: IndexPathSender,
-    // path_receiver: IndexPathReceiver,
-    // entry_sender: IndexEntrySender,
-    // entry_receiver: IndexEntryReceiver,
-    // markdown_files: MarkdownFiles,
+    pub(crate) source_field: TantivyField,
+    pub(crate) indexed_at_field: TantivyField,
+    pub(crate) path_field: TantivyField,
+    pub(crate) title_field: TantivyField,
+    pub(crate) body_field: TantivyField,
 }
 
 pub(crate) type SearchResultsAndErrors =
@@ -151,7 +145,6 @@ impl FulltextIndex {
             config,
             last_indexing_epoch,
             index,
-            schema,
             reader,
             writer,
             source_field,
@@ -159,11 +152,6 @@ impl FulltextIndex {
             path_field,
             title_field,
             body_field,
-            // path_sender,
-            // path_receiver,
-            // entry_sender,
-            // entry_receiver,
-            // markdown_files,
         })
     }
 
@@ -325,13 +313,8 @@ impl FulltextIndex {
         lenient: bool,
     ) -> SearchResultsAndErrors {
         let searcher = self.reader.searcher();
-
-        let schema = self.index.schema();
-        let source = schema.get_field(SOURCE).unwrap();
-        let indexed_at = schema.get_field(INDEXED_AT).unwrap();
-        let path = schema.get_field(PATH).unwrap();
-        let title = schema.get_field(TITLE).unwrap();
-        let body = schema.get_field(BODY).unwrap();
+        let title = self.title_field;
+        let body = self.body_field;
 
         let query_parser = QueryParser::for_index(&self.index, vec![title, body]);
         let (query, query_errors) = if lenient {
@@ -351,15 +334,7 @@ impl FulltextIndex {
         for (_score, doc_address) in top_docs {
             let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
             let snippet = snippet_generator.snippet_from_doc(&retrieved_doc);
-            documents.push(SearchResult::new(
-                source,
-                indexed_at,
-                path,
-                title,
-                body,
-                retrieved_doc,
-                snippet,
-            ));
+            documents.push(SearchResult::new(self, retrieved_doc, snippet));
         }
 
         Ok((documents, query_errors))

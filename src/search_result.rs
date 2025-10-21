@@ -9,6 +9,8 @@ use tantivy::{
 };
 use time::{UtcOffset, format_description::well_known::Rfc2822};
 
+use crate::fulltext_index::{self, FulltextIndex};
+
 #[derive(Debug)]
 pub(crate) struct SearchResult {
     source: String,
@@ -22,40 +24,36 @@ pub(crate) struct SearchResult {
 
 impl SearchResult {
     pub(crate) fn new(
-        source: Field,
-        indexed_at: Field,
-        path: Field,
-        title: Field,
-        body: Field,
+        fulltext_index: &FulltextIndex,
         doc: TantivyDocument,
         snippet: Snippet,
     ) -> Self {
         Self {
             source: doc
-                .get_first(source)
+                .get_first(fulltext_index.source_field)
                 .map(|t| t.as_str())
                 .flatten()
                 .unwrap_or_default()
                 .to_owned(),
             indexed_at: doc
-                .get_first(indexed_at)
+                .get_first(fulltext_index.indexed_at_field)
                 .map(|t| t.as_datetime())
                 .flatten()
                 .unwrap_or_default()
                 .to_owned(),
             path: doc
-                .get_first(path)
+                .get_first(fulltext_index.path_field)
                 .map(|t| t.as_str())
                 .flatten()
                 .unwrap_or_default()
                 .to_owned(),
             title: doc
-                .get_first(title)
+                .get_first(fulltext_index.title_field)
                 .map(|t| t.as_str())
                 .flatten()
                 .unwrap_or_default()
                 .to_owned(),
-            body,
+            body: fulltext_index.body_field,
             snippet,
             tantivy_doc: doc,
         }

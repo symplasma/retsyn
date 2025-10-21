@@ -5,6 +5,67 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.1 (2025-10-20)
+
+### New Features
+
+ - <csr-id-e34e0842636c8b0416ba56d1581fa24c8d4c0837/> add configuration screen with file picker and first-run detection
+ - <csr-id-6d0d7ef496b1b045695474e5be62415a8affb662/> add help screen with keyboard shortcuts and search syntax
+ - <csr-id-64617991273b7a80beaefd72b5d04a2a926c2212/> Threaded search is working
+ - <csr-id-51fa03df43cb23654a726526d300d38337d708df/> add IndexEntry trait with core methods for indexing
+ - <csr-id-02eba6adb00294631616893c26fa4ca4275eb663/> add index_entry module to src directory
+ - <csr-id-e3d194e4e5be15f8aa70e4ee4b5090240f42b575/> add toggle functionality for Snippets button
+ - <csr-id-221ed5f0652b03e3b28f04d83b81f0ec92687209/> add snippets button toggle functionality in UI
+ - <csr-id-2dac19cdc365b946453068a089b4c215cb26e06c/> Add button bar
+ - <csr-id-41c58514e1917630a69976e29b9a9ae19b0e4f86/> Make headers easier to read
+ - <csr-id-6a325471a5e538439c8e9b1870321f0806b49f69/> add full-width snippet rendering with `add_sized`
+ - <csr-id-e34ed9d14999b05cb7f1ad9b4b40dd351f7d8202/> add comment for full-width widget placement in search result UI
+ - <csr-id-f5839c083cf353c562477c036109fd2ec61e2ffd/> Add CLI flags for default config and index clearing
+
+### Bug Fixes
+
+ - <csr-id-5d2d0f8cb6f7ba147fec82c9e614e678704ce8b2/> Add missing dependency
+ - <csr-id-cb44951db356e43202b0b2e9253db6eb3d28c9c8/> Display results and preview as columns
+ - <csr-id-648b8729984609e59c76dca8e23d224be39cb31a/> Fix broken code
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 20 commits contributed to the release over the course of 3 calendar days.
+ - 4 days passed between releases.
+ - 15 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Add missing dependency ([`5d2d0f8`](https://github.com/symplasma/retsyn/commit/5d2d0f8cb6f7ba147fec82c9e614e678704ce8b2))
+    - Add configuration screen with file picker and first-run detection ([`e34e084`](https://github.com/symplasma/retsyn/commit/e34e0842636c8b0416ba56d1581fa24c8d4c0837))
+    - Add help screen with keyboard shortcuts and search syntax ([`6d0d7ef`](https://github.com/symplasma/retsyn/commit/6d0d7ef496b1b045695474e5be62415a8affb662))
+    - Threaded search is working ([`6461799`](https://github.com/symplasma/retsyn/commit/64617991273b7a80beaefd72b5d04a2a926c2212))
+    - First attempt at threaded updates ([`3c40ec8`](https://github.com/symplasma/retsyn/commit/3c40ec8d390fb7be8a2317b9e57abff74940b5fe))
+    - Add IndexEntry trait with core methods for indexing ([`51fa03d`](https://github.com/symplasma/retsyn/commit/51fa03df43cb23654a726526d300d38337d708df))
+    - Add index_entry module to src directory ([`02eba6a`](https://github.com/symplasma/retsyn/commit/02eba6adb00294631616893c26fa4ca4275eb663))
+    - Add update_entry function ([`3119398`](https://github.com/symplasma/retsyn/commit/3119398edf6383339d4366a3d49436d2a523810d))
+    - Display results and preview as columns ([`cb44951`](https://github.com/symplasma/retsyn/commit/cb44951db356e43202b0b2e9253db6eb3d28c9c8))
+    - First attempt at preview area ([`ea91a94`](https://github.com/symplasma/retsyn/commit/ea91a94149e66e6b66abd3ce284871df7a1324a4))
+    - Add toggle functionality for Snippets button ([`e3d194e`](https://github.com/symplasma/retsyn/commit/e3d194e4e5be15f8aa70e4ee4b5090240f42b575))
+    - Add snippets button toggle functionality in UI ([`221ed5f`](https://github.com/symplasma/retsyn/commit/221ed5f0652b03e3b28f04d83b81f0ec92687209))
+    - Add button bar ([`2dac19c`](https://github.com/symplasma/retsyn/commit/2dac19cdc365b946453068a089b4c215cb26e06c))
+    - Make headers easier to read ([`41c5851`](https://github.com/symplasma/retsyn/commit/41c58514e1917630a69976e29b9a9ae19b0e4f86))
+    - Make snippets full-width ([`a924b28`](https://github.com/symplasma/retsyn/commit/a924b2887f23dc5518d461acabe78e977b94ecf7))
+    - Add full-width snippet rendering with `add_sized` ([`6a32547`](https://github.com/symplasma/retsyn/commit/6a325471a5e538439c8e9b1870321f0806b49f69))
+    - Add comment for full-width widget placement in search result UI ([`e34ed9d`](https://github.com/symplasma/retsyn/commit/e34ed9d14999b05cb7f1ad9b4b40dd351f7d8202))
+    - Fix broken code ([`648b872`](https://github.com/symplasma/retsyn/commit/648b8729984609e59c76dca8e23d224be39cb31a))
+    - Add CLI flags for default config and index clearing ([`f5839c0`](https://github.com/symplasma/retsyn/commit/f5839c083cf353c562477c036109fd2ec61e2ffd))
+    - Reorganize features ([`bb2a404`](https://github.com/symplasma/retsyn/commit/bb2a404a82f1949393dd225f98513832014dc312))
+</details>
+
 ## v0.1.0 (2025-10-16)
 
 <csr-id-008a3c24b0d906daa743d26cd9de8f57a0375a9e/>
@@ -60,7 +121,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 50 commits contributed to the release over the course of 17 calendar days.
+ - 51 commits contributed to the release over the course of 17 calendar days.
  - 26 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -71,6 +132,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release retsyn v0.1.0 ([`5541493`](https://github.com/symplasma/retsyn/commit/55414933249a5db957e89756b10d7c26c20a48d3))
     - Add auto-generated changelog ([`620f97f`](https://github.com/symplasma/retsyn/commit/620f97f8e37fe4849587f91230b8d2d609361987))
     - Add missing cargo metadata ([`b8fa75d`](https://github.com/symplasma/retsyn/commit/b8fa75d1ffe46a697d7debe8ce13dc6b59418e2e))
     - Add license and status ([`f5e3ddd`](https://github.com/symplasma/retsyn/commit/f5e3ddd181862816e132ed30fc60a09ca7376dd7))

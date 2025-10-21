@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.2 (2025-10-20)
+
+### New Features
+
+ - <csr-id-397e5944a502448568652382717c0376f34f38a2/> Enable tooltips for links in preview
+ - <csr-id-9ca505ee0deb2f50d0a7d80d61efc8d0206ee732/> Improve markdown rendering in preview
+ - <csr-id-1dc7f6686f342c5d0186beeea53177f8d85beddc/> Add document preview
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 4 commits contributed to the release.
+ - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Enable tooltips for links in preview ([`397e594`](https://github.com/symplasma/retsyn/commit/397e5944a502448568652382717c0376f34f38a2))
+    - Improve markdown rendering in preview ([`9ca505e`](https://github.com/symplasma/retsyn/commit/9ca505ee0deb2f50d0a7d80d61efc8d0206ee732))
+    - Add document preview ([`1dc7f66`](https://github.com/symplasma/retsyn/commit/1dc7f6686f342c5d0186beeea53177f8d85beddc))
+    - Add draw_preview_area method ([`06325b8`](https://github.com/symplasma/retsyn/commit/06325b8c41be7e37f7d180576a183297a47e995f))
+</details>
+
 ## v0.1.1 (2025-10-20)
 
 ### New Features
@@ -32,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 20 commits contributed to the release over the course of 3 calendar days.
+ - 21 commits contributed to the release over the course of 3 calendar days.
  - 4 days passed between releases.
  - 15 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -44,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release retsyn v0.1.1 ([`769ee0b`](https://github.com/symplasma/retsyn/commit/769ee0b5ac54915cebcaaa8a1e58728b18c57d29))
     - Add missing dependency ([`5d2d0f8`](https://github.com/symplasma/retsyn/commit/5d2d0f8cb6f7ba147fec82c9e614e678704ce8b2))
     - Add configuration screen with file picker and first-run detection ([`e34e084`](https://github.com/symplasma/retsyn/commit/e34e0842636c8b0416ba56d1581fa24c8d4c0837))
     - Add help screen with keyboard shortcuts and search syntax ([`6d0d7ef`](https://github.com/symplasma/retsyn/commit/6d0d7ef496b1b045695474e5be62415a8affb662))

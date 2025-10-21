@@ -33,26 +33,43 @@ pub struct RetsynApp {
     show_snippets: bool,
     show_preview: bool,
     show_help: bool,
-    fulltext_index: FulltextIndex,
+    show_config: bool,
+    config: Conf,
+    config_markdown_files: Vec<String>,
+    fulltext_index: Option<FulltextIndex>,
 }
 
 impl RetsynApp {
     fn new() -> Result<Self, TantivyError> {
         let config_file = PROJECT_DIRS.config_dir().to_path_buf().join("retsyn.toml");
+        let config_exists = Conf::config_exists();
 
-        let config = match Conf::builder().env().file(config_file).load() {
+        let config = match Conf::builder().env().file(&config_file).load() {
             Ok(config) => config,
             Err(_) => {
-                // TODO make this something that can be invoked via a CLI option
-                // create the config template
-                println!("{}", toml::template::<Conf>(FormatOptions::default()));
-                exit(0)
+                // If config doesn't exist, create a default one
+                Conf::builder().env().load().unwrap_or_else(|_| {
+                    // If even that fails, use hardcoded defaults
+                    println!("{}", toml::template::<Conf>(FormatOptions::default()));
+                    exit(0)
+                })
             }
         };
 
-        let mut fulltext_index = FulltextIndex::new(config)?;
-        // TODO need to move this into a separate thread
-        fulltext_index.update()?;
+        // Convert PathBuf to String for editing
+        let config_markdown_files: Vec<String> = config
+            .markdown_files
+            .iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect();
+
+        let fulltext_index = if config_exists {
+            let mut index = FulltextIndex::new(config.clone())?;
+            index.update()?;
+            Some(index)
+        } else {
+            None
+        };
 
         Ok(Self {
             search_text: String::new(),
@@ -71,6 +88,9 @@ impl RetsynApp {
             show_snippets: true,
             show_preview: false,
             show_help: false,
+            show_config: !config_exists,
+            config,
+            config_markdown_files,
             fulltext_index,
         })
     }
@@ -85,8 +105,8 @@ impl RetsynApp {
         if self.search_text.is_empty() {
             self.matched_items = Ok(Vec::default());
             self.selected_index = None;
-        } else {
-            self.matched_items = self.fulltext_index.search(&self.search_text, 20);
+        } else if let Some(ref index) = self.fulltext_index {
+            self.matched_items = index.search(&self.search_text, 20);
             self.selected_index = if self.matched_items.as_ref().is_ok_and(|m| m.is_empty()) {
                 None
             } else {
@@ -175,6 +195,120 @@ impl RetsynApp {
         }
     }
 
+    fn draw_config_screen(&mut self, ui: &mut egui::Ui) {
+        ui.vertical_centered(|ui| {
+            ui.heading(RichText::new("Retsyn Configuration").size(24.0));
+            ui.add_space(20.0);
+        });
+
+        egui::ScrollArea::vertical()
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                ui.group(|ui| {
+                    ui.heading("Markdown Files");
+                    ui.add_space(10.0);
+                    ui.label("Directories containing loose markdown files to index:");
+                    ui.add_space(10.0);
+
+                    let mut to_remove: Option<usize> = None;
+
+                    for (idx, path) in self.config_markdown_files.iter_mut().enumerate() {
+                        ui.horizontal(|ui| {
+                            ui.label(format!("{}.", idx + 1));
+                            
+                            let text_edit = egui::TextEdit::singleline(path)
+                                .desired_width(ui.available_width() - 120.0);
+                            ui.add(text_edit);
+
+                            if ui.button("Browse...").clicked() {
+                                if let Some(folder) = rfd::FileDialog::new().pick_folder() {
+                                    *path = folder.to_string_lossy().to_string();
+                                }
+                            }
+
+                            if ui.button("Remove").clicked() {
+                                to_remove = Some(idx);
+                            }
+                        });
+                    }
+
+                    if let Some(idx) = to_remove {
+                        self.config_markdown_files.remove(idx);
+                    }
+
+                    ui.add_space(10.0);
+
+                    if ui.button("Add Directory").clicked() {
+                        self.config_markdown_files.push(String::new());
+                    }
+                });
+
+                ui.add_space(20.0);
+
+                ui.horizontal(|ui| {
+                    if ui.button("Save Configuration").clicked() {
+                        // Convert strings back to PathBuf
+                        self.config.markdown_files = self
+                            .config_markdown_files
+                            .iter()
+                            .filter(|s| !s.trim().is_empty())
+                            .map(|s| std::path::PathBuf::from(s))
+                            .collect();
+
+                        match self.config.save() {
+                            Ok(path) => {
+                                println!("Configuration saved to: {}", path.display());
+                                
+                                // Rebuild the index with new configuration
+                                match FulltextIndex::new(self.config.clone()) {
+                                    Ok(mut index) => {
+                                        if let Err(e) = index.update() {
+                                            println!("Error updating index: {}", e);
+                                        } else {
+                                            self.fulltext_index = Some(index);
+                                            self.show_config = false;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        println!("Error creating index: {}", e);
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                println!("Error saving configuration: {}", e);
+                            }
+                        }
+                    }
+
+                    if self.fulltext_index.is_some() && ui.button("Cancel").clicked() {
+                        // Reload config from file
+                        self.config_markdown_files = self
+                            .config
+                            .markdown_files
+                            .iter()
+                            .map(|p| p.to_string_lossy().to_string())
+                            .collect();
+                        self.show_config = false;
+                    }
+                });
+
+                ui.add_space(20.0);
+
+                ui.vertical_centered(|ui| {
+                    ui.label(
+                        RichText::new("Configuration will be saved to:")
+                            .italics()
+                            .size(12.0),
+                    );
+                    ui.label(
+                        RichText::new(Conf::config_path().display().to_string())
+                            .monospace()
+                            .size(12.0),
+                    );
+                });
+            });
+    }
+
     fn draw_help_screen(&mut self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
             ui.heading(RichText::new("Retsyn Help").size(24.0));
@@ -190,6 +324,7 @@ impl RetsynApp {
 
                     let shortcuts = vec![
                         ("Ctrl+H or Ctrl+?", "Show/hide this help screen"),
+                        ("Ctrl+,", "Show/hide configuration screen"),
                         ("Ctrl+U", "Clear search text"),
                         ("Escape", "Clear search or close window"),
                         ("Ctrl+Q / Ctrl+W / Ctrl+C / Ctrl+D", "Close window"),
@@ -287,6 +422,11 @@ impl RetsynApp {
 
     fn draw_main_ui(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
+            if self.show_config {
+                self.draw_config_screen(ui);
+                return;
+            }
+
             if self.show_help {
                 self.draw_help_screen(ui);
                 return;
@@ -415,12 +555,28 @@ impl RetsynApp {
     }
 
     fn handle_key_events(&mut self, ctx: &egui::Context) {
+        // Toggle config screen with Ctrl+,
+        if ctx.input(|i| i.key_pressed(egui::Key::Comma) && i.modifiers.ctrl) {
+            self.show_config = !self.show_config;
+            self.show_help = false;
+            return;
+        }
+
         // Toggle help screen with Ctrl+H or Ctrl+?
         if ctx.input(|i| {
             (i.key_pressed(egui::Key::H) && i.modifiers.ctrl)
                 || (i.key_pressed(egui::Key::Questionmark) && i.modifiers.ctrl)
         }) {
             self.show_help = !self.show_help;
+            self.show_config = false;
+            return;
+        }
+
+        // If config screen is showing, Escape closes it (only if index exists)
+        if self.show_config {
+            if ctx.input(|i| i.key_pressed(egui::Key::Escape)) && self.fulltext_index.is_some() {
+                self.show_config = false;
+            }
             return;
         }
 

@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use egui::{Color32, Frame, TextStyle};
+use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use tantivy::{
     DateTime, TantivyDocument,
     schema::{Field, Value},
@@ -94,9 +95,10 @@ impl SearchResult {
             .inner_margin(4.0)
             .show(ui, |ui| {
                 ui.horizontal_wrapped(|ui| {
+                    // the below was kinda working, but it needs an update for the new version of egui
+                    // let width = ui.fonts(|f| f.glyph_width(&TextStyle::Body.resolve(ui.style()), ' '));
                     // TODO adjust spacing to make it more visually pleasing
-                    let width =
-                        ui.fonts(|f| f.glyph_width(&TextStyle::Body.resolve(ui.style()), ' '));
+                    let width = 1.0;
                     ui.spacing_mut().item_spacing.x = width;
 
                     let mut start_from = 0;
@@ -113,8 +115,10 @@ impl SearchResult {
             });
     }
 
-    pub(crate) fn draw_preview_area(&self, ui: &mut egui::Ui) -> egui::Response {
-        ui.label(self.body())
+    pub(crate) fn draw_preview_area(&self, ui: &mut egui::Ui) {
+        let text = self.body();
+        let mut cache = CommonMarkCache::default();
+        CommonMarkViewer::new().show(ui, &mut cache, &text);
     }
 
     pub(crate) fn open(&self) {

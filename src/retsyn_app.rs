@@ -518,7 +518,9 @@ impl RetsynApp {
                                 .auto_shrink([false, false])
                                 .show(&mut columns[1], |ui| match self.selected_item() {
                                     Some(selected_item) => selected_item.draw_preview_area(ui),
-                                    None => ui.heading("preview"),
+                                    None => {
+                                        ui.heading("preview");
+                                    }
                                 });
                         }
                     })

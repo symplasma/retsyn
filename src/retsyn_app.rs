@@ -338,6 +338,7 @@ impl RetsynApp {
                     let shortcuts = vec![
                         ("Ctrl+H or Ctrl+?", "Show/hide this help screen"),
                         ("Ctrl+,", "Show/hide configuration screen"),
+                        ("Ctrl+P", "Toggle preview pane"),
                         ("Ctrl+U", "Clear search text"),
                         ("Escape", "Clear search or close window"),
                         ("Ctrl+Q / Ctrl+W / Ctrl+C / Ctrl+D", "Close window"),
@@ -592,6 +593,12 @@ impl RetsynApp {
         }) {
             self.show_help = !self.show_help;
             self.show_config = false;
+            return;
+        }
+
+        // Toggle preview pane with Ctrl+P
+        if ctx.input(|i| i.key_pressed(egui::Key::P) && i.modifiers.ctrl) {
+            self.show_preview = !self.show_preview;
             return;
         }
 

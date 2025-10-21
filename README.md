@@ -26,33 +26,34 @@ This is a list of features. Implemented features are checked, the rest are plann
 - [x] Show snippets for items
 - [x] Allow updates for items in the full text index
 - [x] Allow incremental updates to the index
-- [ ] Ask the user for config info on first launch
-- [ ] Configuration screen
+- [x] Ask the user for config info on first launch (needs testing)
+- [x] Configuration screen
 - [ ] Add better navigation
   - [x] Clear query via `Ctrl+u` or `Esc`
   - [x] Clear to end of query via `Ctrl+k`
   - [ ] Word forward/back
   - [ ] Beginning/end of query
-- [ ] Add help screen with search syntax guide
+  - [ ] Clicking on item selects it
+  - [ ] Double clicking item launches it
+- [x] Add help screen with search syntax guide
 - [ ] Ensure that search debounce is working correctly
 - [ ] Show all items that fit within the current window
 - [ ] Record and show recent queries
-- [ ] Allow toggling between fuzzy and exact search
-- [ ] Allow indexing in another thread
-- [ ] Do indexing in background thread
-- [ ] Add toggle for display of snippets
+- [ ] Record and show recent item activations
+- [x] Allow toggling between fuzzy and exact search
+- [x] Do indexing in background threads
+- [x] Add toggle for display of snippets
+- [ ] Auto-toggle snippets off when fuzzy search is active ([Snippet generation breaks with fuzzy fields · Issue #2576](https://github.com/quickwit-oss/tantivy/issues/2576))
 - [ ] Add highlighting of terms in title
-- [ ] Add toggle for fuzzy search
 - [ ] Add garbage collection for tantivy store after indexing completes
-- [ ] Allow clearing of search indexes via a CLI flag
-- [ ] Add more file types for indexing
+- [x] Allow clearing of search indexes via a CLI flag
+- [ ] Add more indexing sources and types
 - [ ] Add file type converters
   - [ ] HTML to Markdown so we can search only content
   - [ ] OCR for images
   - [ ] Speech to text for audio
 - [ ] Add scoping based on item source
-- [ ] Ensure that queries allow for powerful searches
-- [ ] Add more indexing sources and types
+- [x] Ensure that queries allow for powerful searches
 
 ### Future Features
 

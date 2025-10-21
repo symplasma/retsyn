@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use egui::{Color32, Frame, TextStyle};
+use egui::{Color32, Frame};
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use tantivy::{
     DateTime, TantivyDocument,
@@ -9,7 +9,7 @@ use tantivy::{
 };
 use time::{UtcOffset, format_description::well_known::Rfc2822};
 
-use crate::fulltext_index::{self, FulltextIndex};
+use crate::fulltext_index::FulltextIndex;
 
 #[derive(Debug)]
 pub(crate) struct SearchResult {

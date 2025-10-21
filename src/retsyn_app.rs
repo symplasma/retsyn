@@ -23,8 +23,6 @@ pub(crate) static PROJECT_DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
     ProjectDirs::from("org", "symplasma", "retsyn").expect("should be able to create project dir")
 });
 
-type SearchResultList = Vec<SearchResult>;
-
 pub struct RetsynApp {
     search_text: String,
     last_search_text: String,
@@ -43,6 +41,7 @@ pub struct RetsynApp {
     config_markdown_files: Vec<String>,
     fulltext_index: Option<FulltextIndex>,
     lenient: bool,
+    fuzziness: u8,
 }
 
 impl RetsynApp {
@@ -99,6 +98,7 @@ impl RetsynApp {
             config_markdown_files,
             fulltext_index,
             lenient: true,
+            fuzziness: 0,
         })
     }
 
@@ -126,7 +126,7 @@ impl RetsynApp {
             self.matched_items = Ok((vec![], vec![]));
             self.selected_index = None;
         } else if let Some(ref index) = self.fulltext_index {
-            self.matched_items = index.search(&self.search_text, 20, self.lenient);
+            self.matched_items = index.search(&self.search_text, 20, self.lenient, self.fuzziness);
             self.selected_index = if self
                 .matched_items
                 .as_ref()
@@ -504,48 +504,69 @@ impl RetsynApp {
                 // add mode toggles
                 ui.with_layout(Layout::left_to_right(egui::Align::TOP), |ui| {
                     // TODO replace with `columns_const`
-                    ui.columns_const(|[lenient_col, snippet_col, preview_col, help_col]| {
-                        if lenient_col
-                            .add_sized(
-                                [lenient_col.available_width(), 0.0],
-                                Button::new("Lenient").selected(self.lenient),
-                            )
-                            .clicked()
-                        {
-                            self.lenient = !self.lenient;
-                            self.update_search();
-                        };
+                    ui.columns_const(
+                        |[lenient_col, snippet_col, fuzz_col, preview_col, help_col]| {
+                            if lenient_col
+                                .add_sized(
+                                    [lenient_col.available_width(), 0.0],
+                                    Button::new("Lenient").selected(self.lenient),
+                                )
+                                .clicked()
+                            {
+                                self.lenient = !self.lenient;
+                                self.update_search();
+                            };
 
-                        if snippet_col
-                            .add_sized(
-                                [snippet_col.available_width(), 0.0],
-                                Button::new("Snippets").selected(self.show_snippets),
-                            )
-                            .clicked()
-                        {
-                            self.show_snippets = !self.show_snippets;
-                        };
+                            if snippet_col
+                                .add_sized(
+                                    [snippet_col.available_width(), 0.0],
+                                    Button::new("Snippets").selected(self.show_snippets),
+                                )
+                                .clicked()
+                            {
+                                self.show_snippets = !self.show_snippets;
+                            };
 
-                        if preview_col
-                            .add_sized(
-                                [preview_col.available_width(), 0.0],
-                                Button::new("Preview").selected(self.show_preview),
-                            )
-                            .clicked()
-                        {
-                            self.show_preview = !self.show_preview;
-                        };
+                            if fuzz_col
+                                .add_sized([preview_col.available_width(), 0.0], {
+                                    let (name, selected) = if self.fuzziness == 1 {
+                                        ("Fuzzy", true)
+                                    } else if self.fuzziness == 2 {
+                                        ("Very Fuzzy", true)
+                                    } else {
+                                        self.fuzziness = 0;
+                                        ("Exact", false)
+                                    };
+                                    Button::new(name).selected(selected)
+                                })
+                                .clicked()
+                            {
+                                // Levenshtein values from 0 to 2 inclusive are supported
+                                self.fuzziness = (self.fuzziness + 1) % 3;
+                                self.update_search();
+                            };
 
-                        if help_col
-                            .add_sized(
-                                [help_col.available_width(), 0.0],
-                                Button::new("Help").selected(false),
-                            )
-                            .clicked()
-                        {
-                            self.show_help = true;
-                        };
-                    });
+                            if preview_col
+                                .add_sized(
+                                    [preview_col.available_width(), 0.0],
+                                    Button::new("Preview").selected(self.show_preview),
+                                )
+                                .clicked()
+                            {
+                                self.show_preview = !self.show_preview;
+                            };
+
+                            if help_col
+                                .add_sized(
+                                    [help_col.available_width(), 0.0],
+                                    Button::new("Help").selected(false),
+                                )
+                                .clicked()
+                            {
+                                self.show_help = true;
+                            };
+                        },
+                    );
                 });
 
                 // draw query errors
@@ -610,7 +631,7 @@ impl RetsynApp {
     }
 
     fn draw_search_results(&mut self, clicked_item: &mut Option<(usize, bool)>, ui: &mut egui::Ui) {
-        if let Ok((matched_items, errors)) = &self.matched_items {
+        if let Ok((matched_items, _errors)) = &self.matched_items {
             for (idx, item) in matched_items.iter().enumerate() {
                 ui.vertical(|ui| {
                     // draw the item header

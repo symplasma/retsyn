@@ -1,6 +1,5 @@
 use atomicwrites::{AtomicFile, OverwriteBehavior::AllowOverwrite};
 use std::{
-    default,
     fs::{self, create_dir_all},
     io::Write,
     path::{Path, PathBuf},
@@ -13,7 +12,7 @@ use tantivy::{
     TantivyError, Term,
     collector::{Count, TopDocs},
     directory::{ManagedDirectory, MmapDirectory},
-    query::{Query, QueryParser, QueryParserError, TermQuery},
+    query::{QueryParser, QueryParserError, TermQuery},
     schema::{
         DateOptions, Field as TantivyField, INDEXED, IndexRecordOption, STORED, Schema, TEXT,
         TextFieldIndexing, TextOptions,
@@ -311,12 +310,25 @@ impl FulltextIndex {
         query: &str,
         limit: usize,
         lenient: bool,
+        fuzziness: u8,
     ) -> SearchResultsAndErrors {
         let searcher = self.reader.searcher();
         let title = self.title_field;
         let body = self.body_field;
+        let default_fields = vec![title, body];
 
-        let query_parser = QueryParser::for_index(&self.index, vec![title, body]);
+        // setup the query here
+        let mut query_parser = QueryParser::for_index(&self.index, default_fields.clone());
+
+        // set fields fuzzy here
+        // TODO add advanced search config where individual field can have its fuzziness set independently
+        if fuzziness > 0 {
+            for field in &default_fields {
+                query_parser.set_field_fuzzy(*field, true, fuzziness, true);
+            }
+        }
+
+        // parse the query here
         let (query, query_errors) = if lenient {
             query_parser.parse_query_lenient(query)
         } else {
@@ -326,8 +338,11 @@ impl FulltextIndex {
                 Err(error) => return Ok((vec![], vec![error])),
             }
         };
+
+        // perform the search
         let top_docs = searcher.search(&query, &TopDocs::with_limit(limit))?;
 
+        // create a snippet generator so we can draw snippets with highlights
         let snippet_generator = SnippetGenerator::create(&searcher, &query, body)?;
 
         let mut documents: Vec<SearchResult> = Vec::default();

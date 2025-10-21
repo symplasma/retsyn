@@ -116,6 +116,7 @@ impl SearchResult {
     }
 
     pub(crate) fn draw_preview_area(&self, ui: &mut egui::Ui) {
+        ui.style_mut().url_in_tooltip = true;
         let text = self.body();
         let mut cache = CommonMarkCache::default();
         CommonMarkViewer::new().show(ui, &mut cache, &text);

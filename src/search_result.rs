@@ -100,6 +100,10 @@ impl SearchResult {
             });
     }
 
+    pub(crate) fn draw_preview_area(&self, ui: &mut egui::Ui) -> egui::Response {
+        ui.label("body text")
+    }
+
     pub(crate) fn open(&self) {
         println!("Revealing item: {}", self.path);
         if let Some(path) = PathBuf::from(self.path.clone()).parent() {

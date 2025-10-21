@@ -95,6 +95,19 @@ impl RetsynApp {
         })
     }
 
+    /// Returns the currently selected item as a reference
+    ///
+    /// This is useful to render the preview if it is shown.
+    fn selected_item(&self) -> Option<&SearchResult> {
+        match self.selected_index {
+            Some(selected_index) => match &self.matched_items {
+                Ok(items) => items.get(selected_index),
+                Err(_) => None,
+            },
+            None => None,
+        }
+    }
+
     fn clear_search(&mut self) {
         self.search_text.clear();
         self.matched_items = Ok(Vec::default());
@@ -215,7 +228,7 @@ impl RetsynApp {
                     for (idx, path) in self.config_markdown_files.iter_mut().enumerate() {
                         ui.horizontal(|ui| {
                             ui.label(format!("{}.", idx + 1));
-                            
+
                             let text_edit = egui::TextEdit::singleline(path)
                                 .desired_width(ui.available_width() - 120.0);
                             ui.add(text_edit);
@@ -258,7 +271,7 @@ impl RetsynApp {
                         match self.config.save() {
                             Ok(path) => {
                                 println!("Configuration saved to: {}", path.display());
-                                
+
                                 // Rebuild the index with new configuration
                                 match FulltextIndex::new(self.config.clone()) {
                                     Ok(mut index) => {
@@ -354,7 +367,10 @@ impl RetsynApp {
                     ui.add_space(10.0);
 
                     let syntax_examples = vec![
-                        ("simple query", "Search for documents containing these words"),
+                        (
+                            "simple query",
+                            "Search for documents containing these words",
+                        ),
                         ("\"exact phrase\"", "Search for an exact phrase"),
                         ("term1 AND term2", "Both terms must be present"),
                         ("term1 OR term2", "Either term must be present"),
@@ -415,7 +431,9 @@ impl RetsynApp {
                 ui.add_space(20.0);
 
                 ui.vertical_centered(|ui| {
-                    ui.label(RichText::new("Press Ctrl+H or Escape to close this help screen").italics());
+                    ui.label(
+                        RichText::new("Press Ctrl+H or Escape to close this help screen").italics(),
+                    );
                 });
             });
     }
@@ -498,7 +516,10 @@ impl RetsynApp {
                             egui::ScrollArea::vertical()
                                 .id_salt("preview")
                                 .auto_shrink([false, false])
-                                .show(&mut columns[1], |ui| ui.label("preview"));
+                                .show(&mut columns[1], |ui| match self.selected_item() {
+                                    Some(selected_item) => selected_item.draw_preview_area(ui),
+                                    None => ui.heading("preview"),
+                                });
                         }
                     })
                 });

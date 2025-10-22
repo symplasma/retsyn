@@ -42,6 +42,9 @@ pub struct RetsynApp {
     fulltext_index: Option<FulltextIndex>,
     lenient: bool,
     fuzziness: u8,
+    last_click_time: Option<Instant>,
+    last_clicked_index: Option<usize>,
+    double_click_duration: Duration,
 }
 
 impl RetsynApp {
@@ -99,6 +102,9 @@ impl RetsynApp {
             fulltext_index,
             lenient: true,
             fuzziness: 0,
+            last_click_time: None,
+            last_clicked_index: None,
+            double_click_duration: Duration::from_millis(300),
         })
     }
 
@@ -647,8 +653,28 @@ impl RetsynApp {
                         }
 
                         if response.clicked() {
-                            let shift_held = ui.input(|i| i.modifiers.shift);
-                            *clicked_item = Some((idx, shift_held));
+                            let now = Instant::now();
+                            let is_double_click = if let (Some(last_time), Some(last_idx)) = 
+                                (self.last_click_time, self.last_clicked_index) 
+                            {
+                                last_idx == idx && now.duration_since(last_time) < self.double_click_duration
+                            } else {
+                                false
+                            };
+
+                            if is_double_click {
+                                // Double click: activate the item
+                                let shift_held = ui.input(|i| i.modifiers.shift);
+                                *clicked_item = Some((idx, shift_held));
+                                // Reset click tracking after double click
+                                self.last_click_time = None;
+                                self.last_clicked_index = None;
+                            } else {
+                                // Single click: just select the item
+                                self.selected_index = Some(idx);
+                                self.last_click_time = Some(now);
+                                self.last_clicked_index = Some(idx);
+                            }
                         }
                     });
 

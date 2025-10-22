@@ -1,22 +1,10 @@
-use clap::Parser;
+use clap::Parser as _;
 use eframe::egui;
+use retsyn::cli::Cli;
 use retsyn::config::Conf;
 use retsyn::fulltext_index::FulltextIndex;
 use retsyn::retsyn_app::RetsynApp;
 use std::process::exit;
-
-#[derive(Parser)]
-#[command(name = "retsyn")]
-#[command(about = "A full text search program", long_about = None)]
-struct Cli {
-    /// Create a default config template and write it to the default config path
-    #[arg(long)]
-    default_config: bool,
-
-    /// Clear the search index so that it will be regenerated on the next launch
-    #[arg(long)]
-    clear_index: bool,
-}
 
 fn main() -> eframe::Result {
     let cli = Cli::parse();

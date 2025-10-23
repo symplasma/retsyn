@@ -42,9 +42,6 @@ pub struct RetsynApp {
     fulltext_index: Option<FulltextIndex>,
     lenient: bool,
     fuzziness: u8,
-    last_click_time: Option<Instant>,
-    last_clicked_index: Option<usize>,
-    double_click_duration: Duration,
 }
 
 impl RetsynApp {
@@ -102,9 +99,6 @@ impl RetsynApp {
             fulltext_index,
             lenient: true,
             fuzziness: 0,
-            last_click_time: None,
-            last_clicked_index: None,
-            double_click_duration: Duration::from_millis(300),
         })
     }
 
@@ -652,29 +646,15 @@ impl RetsynApp {
                             response.scroll_to_me(Some(egui::Align::Center));
                         }
 
-                        if response.clicked() {
-                            let now = Instant::now();
-                            let is_double_click = if let (Some(last_time), Some(last_idx)) = 
-                                (self.last_click_time, self.last_clicked_index) 
-                            {
-                                last_idx == idx && now.duration_since(last_time) < self.double_click_duration
-                            } else {
-                                false
-                            };
-
-                            if is_double_click {
-                                // Double click: activate the item
-                                let shift_held = ui.input(|i| i.modifiers.shift);
-                                *clicked_item = Some((idx, shift_held));
-                                // Reset click tracking after double click
-                                self.last_click_time = None;
-                                self.last_clicked_index = None;
-                            } else {
-                                // Single click: just select the item
-                                self.selected_index = Some(idx);
-                                self.last_click_time = Some(now);
-                                self.last_clicked_index = Some(idx);
-                            }
+                        // we need to check double click first or we'll never detect it since it contains a single click
+                        if response.double_clicked() {
+                            // Double click: activate the item
+                            // TODO find out why the modifiers shift value seems to be inverted
+                            let shift_held = ui.input(|i| !i.modifiers.shift);
+                            *clicked_item = Some((idx, shift_held));
+                        } else if response.clicked() {
+                            // Single click: just select the item
+                            self.selected_index = Some(idx);
                         }
                     });
 
@@ -684,6 +664,12 @@ impl RetsynApp {
                     }
                 });
             }
+        }
+
+        // act on the double clicked item
+        if let Some((idx, shift_held)) = clicked_item {
+            println!("opening item {} with shift_helf = {}", idx, shift_held);
+            self.open_item(*idx, *shift_held);
         }
 
         self.scroll_to_selected = false;

@@ -40,6 +40,7 @@ pub struct RetsynApp {
     config: Conf,
     config_markdown_files: Vec<String>,
     fulltext_index: Option<FulltextIndex>,
+    limit_results: usize,
     lenient: bool,
     query_conjunction: bool,
     fuzziness: u8,
@@ -98,6 +99,7 @@ impl RetsynApp {
             config,
             config_markdown_files,
             fulltext_index,
+            limit_results: 50,
             lenient: true,
             query_conjunction: true,
             fuzziness: 0,
@@ -130,7 +132,7 @@ impl RetsynApp {
         } else if let Some(ref index) = self.fulltext_index {
             self.matched_items = index.search(
                 &self.search_text,
-                20,
+                self.limit_results,
                 self.lenient,
                 self.query_conjunction,
                 self.fuzziness,

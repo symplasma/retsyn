@@ -60,6 +60,7 @@ impl Conf {
         }
 
         // Serialize the config to TOML
+        // TODO use confique/serde not this AI generated crap
         let mut toml_string = String::new();
         toml_string.push_str("# Retsyn Configuration File\n\n");
         toml_string.push_str("# Directories containing loose markdown files to index\n");
@@ -70,6 +71,7 @@ impl Conf {
         toml_string.push_str("]\n");
 
         // Write to file
+        // TODO use atomic write for config files
         fs::write(&config_path, toml_string)?;
 
         Ok(config_path)

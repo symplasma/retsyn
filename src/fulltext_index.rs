@@ -310,6 +310,7 @@ impl FulltextIndex {
         query: &str,
         limit: usize,
         lenient: bool,
+        query_conjunction: bool,
         fuzziness: u8,
     ) -> SearchResultsAndErrors {
         let searcher = self.reader.searcher();
@@ -319,6 +320,10 @@ impl FulltextIndex {
 
         // setup the query here
         let mut query_parser = QueryParser::for_index(&self.index, default_fields.clone());
+
+        if query_conjunction {
+            query_parser.set_conjunction_by_default();
+        }
 
         // set fields fuzzy here
         // TODO add advanced search config where individual field can have its fuzziness set independently

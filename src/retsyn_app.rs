@@ -41,6 +41,7 @@ pub struct RetsynApp {
     config_markdown_files: Vec<String>,
     fulltext_index: Option<FulltextIndex>,
     lenient: bool,
+    query_conjunction: bool,
     fuzziness: u8,
 }
 
@@ -98,6 +99,7 @@ impl RetsynApp {
             config_markdown_files,
             fulltext_index,
             lenient: true,
+            query_conjunction: true,
             fuzziness: 0,
         })
     }
@@ -126,7 +128,13 @@ impl RetsynApp {
             self.matched_items = Ok((vec![], vec![]));
             self.selected_index = None;
         } else if let Some(ref index) = self.fulltext_index {
-            self.matched_items = index.search(&self.search_text, 20, self.lenient, self.fuzziness);
+            self.matched_items = index.search(
+                &self.search_text,
+                20,
+                self.lenient,
+                self.query_conjunction,
+                self.fuzziness,
+            );
             self.selected_index = if self
                 .matched_items
                 .as_ref()
@@ -353,6 +361,18 @@ impl RetsynApp {
                     });
 
                     ui.horizontal(|ui| {
+                        ui.label(RichText::new("All/Any button").strong());
+                        ui.label("—");
+                        ui.label("Toggle require all or any query parameters");
+                    });
+
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Exact/Fuzzy button").strong());
+                        ui.label("—");
+                        ui.label("Choose between Exact, Fuzzy, or Very Fuzzy matching on the title and body fields");
+                    });
+
+                    ui.horizontal(|ui| {
                         ui.label(RichText::new("Snippets button").strong());
                         ui.label("—");
                         ui.label("Toggle display of search result snippets");
@@ -505,7 +525,14 @@ impl RetsynApp {
                 ui.with_layout(Layout::left_to_right(egui::Align::TOP), |ui| {
                     // TODO replace with `columns_const`
                     ui.columns_const(
-                        |[lenient_col, snippet_col, fuzz_col, preview_col, help_col]| {
+                        |[
+                            lenient_col,
+                            conjunction_col,
+                            fuzz_col,
+                            snippet_col,
+                            preview_col,
+                            help_col,
+                        ]| {
                             if lenient_col
                                 .add_sized(
                                     [lenient_col.available_width(), 0.0],
@@ -517,14 +544,16 @@ impl RetsynApp {
                                 self.update_search();
                             };
 
-                            if snippet_col
-                                .add_sized(
-                                    [snippet_col.available_width(), 0.0],
-                                    Button::new("Snippets").selected(self.show_snippets),
-                                )
+                            if conjunction_col
+                                .add_sized([conjunction_col.available_width(), 0.0], {
+                                    let button_name =
+                                        if self.query_conjunction { "All" } else { "Any" };
+                                    Button::new(button_name).selected(self.query_conjunction)
+                                })
                                 .clicked()
                             {
-                                self.show_snippets = !self.show_snippets;
+                                self.query_conjunction = !self.query_conjunction;
+                                self.update_search();
                             };
 
                             if fuzz_col
@@ -544,6 +573,16 @@ impl RetsynApp {
                                 // Levenshtein values from 0 to 2 inclusive are supported
                                 self.fuzziness = (self.fuzziness + 1) % 3;
                                 self.update_search();
+                            };
+
+                            if snippet_col
+                                .add_sized(
+                                    [snippet_col.available_width(), 0.0],
+                                    Button::new("Snippets").selected(self.show_snippets),
+                                )
+                                .clicked()
+                            {
+                                self.show_snippets = !self.show_snippets;
                             };
 
                             if preview_col

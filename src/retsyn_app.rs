@@ -241,7 +241,7 @@ impl RetsynApp {
                             ui.label(format!("{}.", idx + 1));
 
                             let text_edit = egui::TextEdit::singleline(path)
-                                .desired_width(ui.available_width() - 120.0);
+                                .desired_width(ui.available_width() - 140.0);
                             ui.add(text_edit);
 
                             if ui.button("Browse...").clicked() {

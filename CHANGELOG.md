@@ -5,7 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.4 (2025-10-23)
+
+### New Features
+
+ - <csr-id-4a2d90c4f6ad3c789e727641c9549b59aaea7ab5/> Add result limit to UI
+ - <csr-id-45ce9f9104133309e7cef3a3f06db02b5b9dee80/> Add query conjunction toggle
+ - <csr-id-27efbc051747cfb50cd367511ae77d41580620ae/> implement single-click selection and double-click activation for search results
+
+### Bug Fixes
+
+ - <csr-id-222b4dbcb3900964076be14d06b4d53bb9c09bb0/> Fix Claude's overly complex solution
+ - <csr-id-a4584f2572fc470abe9f92a446564343753ec2aa/> Correct config screen layout
+
+### Refactor
+
+ - <csr-id-8e0b24605debea5acd07494882ec9e2b820ef577/> Variablize and increase the result limit
+ - <csr-id-da581c19ff4cb413cfb370219080d89cb4e890ce/> Move Cli parsing into separate module
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 9 commits contributed to the release over the course of 1 calendar day.
+ - 2 days passed between releases.
+ - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Add result limit to UI ([`4a2d90c`](https://github.com/symplasma/retsyn/commit/4a2d90c4f6ad3c789e727641c9549b59aaea7ab5))
+    - Variablize and increase the result limit ([`8e0b246`](https://github.com/symplasma/retsyn/commit/8e0b24605debea5acd07494882ec9e2b820ef577))
+    - Add query conjunction toggle ([`45ce9f9`](https://github.com/symplasma/retsyn/commit/45ce9f9104133309e7cef3a3f06db02b5b9dee80))
+    - Fix Claude's overly complex solution ([`222b4db`](https://github.com/symplasma/retsyn/commit/222b4dbcb3900964076be14d06b4d53bb9c09bb0))
+    - Implement single-click selection and double-click activation for search results ([`27efbc0`](https://github.com/symplasma/retsyn/commit/27efbc051747cfb50cd367511ae77d41580620ae))
+    - Add config save todos ([`afec609`](https://github.com/symplasma/retsyn/commit/afec60985e8dc12f6d25a026d988986e7a3991da))
+    - Correct config screen layout ([`a4584f2`](https://github.com/symplasma/retsyn/commit/a4584f2572fc470abe9f92a446564343753ec2aa))
+    - Move Cli parsing into separate module ([`da581c1`](https://github.com/symplasma/retsyn/commit/da581c19ff4cb413cfb370219080d89cb4e890ce))
+    - Update features ([`4309340`](https://github.com/symplasma/retsyn/commit/43093403bba4dc349a684ace291780595ef06215))
+</details>
+
 ## v0.1.3 (2025-10-21)
+
+<csr-id-23293c7da5d078ed1d5fcebd3f4519b7e2a70fbc/>
+<csr-id-850f1acd09171676a4a6ab38cab567f7c23bf997/>
+<csr-id-e2e73ef454e1fb2b9b873134f4ea9d11fe5a60e1/>
 
 ### Chore
 
@@ -27,7 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 7 commits contributed to the release.
+ - 8 commits contributed to the release.
  - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -38,6 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release retsyn v0.1.3 ([`d75d4e7`](https://github.com/symplasma/retsyn/commit/d75d4e755a1f90335e30784e7c4435f874b0a58c))
     - Add support for fuzzy search ([`3a4696b`](https://github.com/symplasma/retsyn/commit/3a4696bd6641e33d2aef7fa80b04215ba0c7b1a8))
     - Switch to columns_const ([`e2e73ef`](https://github.com/symplasma/retsyn/commit/e2e73ef454e1fb2b9b873134f4ea9d11fe5a60e1))
     - Clean up tantivy field handling ([`23293c7`](https://github.com/symplasma/retsyn/commit/23293c7da5d078ed1d5fcebd3f4519b7e2a70fbc))

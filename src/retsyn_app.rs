@@ -10,7 +10,7 @@ use confique::{
     toml::{self, FormatOptions},
 };
 use directories::ProjectDirs;
-use egui::{Align, Button, Color32, Layout, RichText};
+use egui::{Align, Button, Color32, DragValue, Layout, RichText};
 use tantivy::TantivyError;
 
 use crate::{
@@ -509,19 +509,24 @@ impl RetsynApp {
             }
 
             ui.vertical(|ui| {
-                ui.add_space(10.0);
+                ui.horizontal(|ui| {
+                    let response = ui.add(
+                        egui::TextEdit::singleline(&mut self.search_text)
+                            .desired_width(ui.available_width() - 56.0)
+                            .hint_text("Search..."),
+                    );
 
-                let response = ui.add(
-                    egui::TextEdit::singleline(&mut self.search_text)
-                        .desired_width(f32::INFINITY)
-                        .hint_text("Search..."),
-                );
+                    if response.changed() {
+                        self.last_input_time = Some(Instant::now());
+                    }
 
-                if response.changed() {
-                    self.last_input_time = Some(Instant::now());
-                }
+                    response.request_focus();
+                    if ui.add(DragValue::new(&mut self.limit_results)).changed() {
+                        self.update_search();
+                    };
+                });
 
-                response.request_focus();
+                ui.add_space(5.0);
 
                 // add mode toggles
                 ui.with_layout(Layout::left_to_right(egui::Align::TOP), |ui| {

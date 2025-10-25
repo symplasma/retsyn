@@ -31,6 +31,14 @@
 - [unum-cloud/usearch: Fast Open-Source Search & Clustering engine × for Vectors & Arbitrary Objects × in C++, C, Python, JavaScript, Rust, Java, Objective-C, Swift, C#, GoLang, and Wolfram 🔍](https://github.com/unum-cloud/usearch)
 - [HashStr — Rust library // Lib.rs](https://lib.rs/crates/hash_str)
 
+## Semantic Search, Vectors, and Embeddings
+
+- [FastEmbed — ML/AI/statistics in Rust // Lib.rs](https://lib.rs/crates/fastembed)
+- [EmbedAnything — ML/AI/statistics in Rust // Lib.rs](https://lib.rs/crates/embed_anything)
+- [SELMR — Rust text processing library // Lib.rs](https://lib.rs/crates/selmr)
+- [mangosaurus – Introduction to SELMR](https://mangosaurus.nl/introduction-to-selmr.html)
+- [selmr - Rust](https://docs.rs/selmr/latest/selmr/)
+
 ## Tantivy Search
 
 - [Basic Example](https://tantivy-search.github.io/examples/basic_search.html)

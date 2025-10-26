@@ -2,11 +2,12 @@ use ignore::Walk;
 
 use crate::{
     config::PathList,
-    index_entry::index_entry::{
-        IndexEntry, IndexEntrySender, IndexPath, IndexPathReceiver, IndexPathSender,
-    },
+    index_entry::index_entry::{IndexEntry, IndexPath, IndexPathSender},
 };
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 pub(crate) const MARKDOWN_FILES_SOURCE: &str = "markdown_files";
 
@@ -62,7 +63,7 @@ impl MarkdownFiles {
     /// 1. Title from frontmatter (if present)
     /// 2. First level 1 heading (# Heading)
     /// 3. Filename without extension
-    fn extract_title(content: &str, path: &PathBuf) -> String {
+    fn extract_title(content: &str, path: &Path) -> String {
         // Try to extract title from frontmatter
         if let Some(frontmatter_title) = Self::extract_frontmatter_title(content) {
             return frontmatter_title;
@@ -123,36 +124,21 @@ impl MarkdownFiles {
         None
     }
 
-    pub(crate) fn convert_paths_to_entries(
-        path_receiver: IndexPathReceiver,
-        entry_sender: IndexEntrySender,
-    ) {
+    pub(crate) fn convert_path_to_entry(path: &Path) -> IndexEntry {
         println!("attempting to convert path to entry...");
-        for index_path in path_receiver {
-            let new_entry = match index_path {
-                IndexPath::MarkdownFile(path_buf) => {
-                    // TODO properly handle non UTF-8 file contents
-                    // TODO handle very large files efficiently
-                    let body = fs::read_to_string(&path_buf).unwrap_or_default();
 
-                    // Extract title according to priority rules
-                    let title = Self::extract_title(&body, &path_buf);
+        // TODO properly handle non UTF-8 file contents
+        // TODO handle very large files efficiently
+        let body = fs::read_to_string(&path).unwrap_or_default();
 
-                    IndexEntry::new(
-                        MARKDOWN_FILES_SOURCE.to_owned(),
-                        path_buf.to_string_lossy().to_string(),
-                        title,
-                        body,
-                    )
-                }
-            };
+        // Extract title according to priority rules
+        let title = Self::extract_title(&body, &path);
 
-            // TODO maybe send these in a Box or Arc to reduce memory allocations
-            entry_sender
-                .send(new_entry)
-                .expect("should be able to send new entry to indexer");
-        }
-
-        drop(entry_sender);
+        IndexEntry::new(
+            MARKDOWN_FILES_SOURCE.to_owned(),
+            path.to_string_lossy().to_string(),
+            title,
+            body,
+        )
     }
 }

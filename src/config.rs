@@ -11,6 +11,9 @@ pub struct Conf {
     /// Directories containing loose markdown files to index
     #[config(default = ["~/Markor"])]
     pub(crate) markdown_files: PathList,
+
+    #[config(default = ["~/WebScrapbook"])]
+    pub(crate) web_scrapbook_files: PathList,
 }
 
 impl Conf {

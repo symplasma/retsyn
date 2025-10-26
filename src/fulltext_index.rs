@@ -22,9 +22,11 @@ use tantivy::{
 use time::OffsetDateTime;
 
 use crate::{
-    collectors::markdown_files::MarkdownFiles,
+    collectors::{markdown_files::MarkdownFiles, web_scrapbook_files::WebScrapbookFiles},
     config::Conf,
-    index_entry::index_entry::{IndexEntry, IndexPathReceiver, IndexPathSender},
+    index_entry::index_entry::{
+        IndexEntry, IndexEntrySender, IndexPath, IndexPathReceiver, IndexPathSender,
+    },
     retsyn_app::PROJECT_DIRS,
     search_result::SearchResult,
 };
@@ -239,22 +241,34 @@ impl FulltextIndex {
 
         // spawn loader channels here
         let markdown_files = MarkdownFiles::new(&self.config.markdown_files);
+        let web_scrapbook_files = WebScrapbookFiles::new(&self.config.web_scrapbook_files);
 
         // start collecting various entries in separate threads here
         println!("spawning markdown file entry collection...");
+        let markdown_path_sender = path_sender.clone();
         spawn(move || {
-            markdown_files.collect_entries(path_sender);
+            markdown_files.collect_entries(markdown_path_sender);
         });
+
+        println!("spawning web scrapbook file entry collection...");
+        let web_scrapbook_path_sender = path_sender.clone();
+        spawn(move || {
+            web_scrapbook_files.collect_entries(web_scrapbook_path_sender);
+        });
+
+        // dropping the original path sender so we don't hang the program waiting for more paths
+        drop(path_sender);
 
         // this is basically happening synchronously here since it depends on the tantivy index
         // might need to wrap the indexes in Arcs and possibly Mutexes to make this asynchronous
+        println!("filtering paths...");
         self.filter_paths_to_update(path_receiver, path_converter_sender);
 
-        spawn(move || {
-            MarkdownFiles::convert_paths_to_entries(path_converter_receiver, entry_sender)
-        });
+        println!("spawning path to entry converter...");
+        spawn(move || Self::convert_paths_to_entries(path_converter_receiver, entry_sender));
 
         // loop through all of the IndexEntries on the receiver and add them to the index
+        println!("starting entry indexing loop...");
         loop {
             // TODO consider switching this back to a normal iter call unless we want to commit in batches
             match entry_receiver.try_recv() {
@@ -303,6 +317,27 @@ impl FulltextIndex {
                 println!("could not index document: {}: {}", &entry.path(), e)
             }
         }
+    }
+
+    fn convert_paths_to_entries(path_receiver: IndexPathReceiver, entry_sender: IndexEntrySender) {
+        println!("attempting to convert path to entry...");
+        for index_path in path_receiver {
+            let new_entry = match index_path {
+                IndexPath::MarkdownFile(path_buf) => {
+                    MarkdownFiles::convert_path_to_entry(&path_buf)
+                }
+                IndexPath::WebScrapBookFile(path_buf) => {
+                    WebScrapbookFiles::convert_path_to_entry(&path_buf)
+                }
+            };
+
+            // TODO maybe send these in a Box or Arc to reduce memory allocations
+            entry_sender
+                .send(new_entry)
+                .expect("should be able to send new entry to indexer");
+        }
+
+        drop(entry_sender);
     }
 
     pub(crate) fn search(

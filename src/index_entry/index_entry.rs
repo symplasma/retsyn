@@ -16,12 +16,14 @@ pub(crate) type IndexPathReceiver = Receiver<IndexPath>;
 
 pub(crate) enum IndexPath {
     MarkdownFile(PathBuf),
+    WebScrapBookFile(PathBuf),
 }
 
 impl IndexPath {
     pub(crate) fn path(&self) -> &Path {
         match self {
             IndexPath::MarkdownFile(path_buf) => path_buf,
+            IndexPath::WebScrapBookFile(path_buf) => path_buf,
         }
     }
 }

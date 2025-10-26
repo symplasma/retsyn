@@ -1,5 +1,6 @@
 use dom_query::Document;
 use ignore::WalkBuilder;
+use readability_rust::{Readability, ReadabilityOptions};
 
 use crate::{
     config::PathList,
@@ -74,8 +75,21 @@ impl WebScrapbookFiles {
         // Extract title according to priority rules
         let title = Self::extract_title(&body);
 
+        let options = ReadabilityOptions {
+            debug: false,
+            keep_classes: false,
+            ..Default::default()
+        };
+
+        let doc = match Readability::new(&body, Some(options)) {
+            Ok(mut article) => match article.parse().map(|a| a.content).flatten() {
+                Some(content) => Document::from(content),
+                None => Document::from(body),
+            },
+            Err(_) => Document::from(body),
+        };
+
         // convert the body to markdown before returning
-        let doc = Document::from(body);
         // TODO ensure that any extraneous elements like styling and classes are not passed along
         // TODO run this through the readability library
         let markdown_body = doc.md(None);

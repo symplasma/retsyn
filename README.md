@@ -39,10 +39,14 @@ This is a list of features. Implemented features are checked, the rest are plann
 - [ ] Ensure that search debounce is working correctly
 - [ ] Show all items that fit within the current window
 - [ ] Record and show recent queries
-- [ ] Record and show recent item activations
+  - [ ] Record and show recent item activations
+  - [ ] Activations should be associated with the search that found them
+  - [ ] We might want the query/activation relation hierarchy to be invertible
 - [x] Allow toggling between fuzzy and exact search
 - [x] Do indexing in background threads
 - [x] Add toggle for display of snippets
+- [ ] Do indexing after starting UI interaction
+- [ ] Display indexing status in UI
 - [ ] Auto-toggle snippets off when fuzzy search is active ([Snippet generation breaks with fuzzy fields · Issue #2576](https://github.com/quickwit-oss/tantivy/issues/2576))
 - [ ] Add highlighting of terms in title
 - [ ] Add garbage collection for tantivy store after indexing completes

@@ -8,6 +8,9 @@ pub(crate) type PathList = Vec<PathBuf>;
 
 #[derive(Config, Clone)]
 pub struct Conf {
+    #[config(default = ["~/.config/aichat/sessions"])]
+    pub(crate) aichat_session_files: PathList,
+
     /// Directories containing loose markdown files to index
     #[config(default = ["~/Markor"])]
     pub(crate) markdown_files: PathList,

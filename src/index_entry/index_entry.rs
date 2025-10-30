@@ -17,6 +17,7 @@ pub(crate) type IndexPathReceiver = Receiver<IndexPath>;
 pub(crate) enum IndexPath {
     MarkdownFile(PathBuf),
     WebScrapBookFile(PathBuf),
+    AichatSessionFile(PathBuf),
 }
 
 impl IndexPath {
@@ -24,6 +25,7 @@ impl IndexPath {
         match self {
             IndexPath::MarkdownFile(path_buf) => path_buf,
             IndexPath::WebScrapBookFile(path_buf) => path_buf,
+            IndexPath::AichatSessionFile(path_buf) => path_buf,
         }
     }
 }

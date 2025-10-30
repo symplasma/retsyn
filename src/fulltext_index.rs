@@ -22,7 +22,10 @@ use tantivy::{
 use time::OffsetDateTime;
 
 use crate::{
-    collectors::{markdown_files::MarkdownFiles, web_scrapbook_files::WebScrapbookFiles},
+    collectors::{
+        aichat_session_files::AichatSessionFiles, markdown_files::MarkdownFiles,
+        web_scrapbook_files::WebScrapbookFiles,
+    },
     config::Conf,
     index_entry::index_entry::{
         IndexEntry, IndexEntrySender, IndexPath, IndexPathReceiver, IndexPathSender,
@@ -240,10 +243,17 @@ impl FulltextIndex {
         let (entry_sender, entry_receiver) = channel();
 
         // spawn loader channels here
+        let aichat_session_files = AichatSessionFiles::new(&self.config.aichat_session_files);
         let markdown_files = MarkdownFiles::new(&self.config.markdown_files);
         let web_scrapbook_files = WebScrapbookFiles::new(&self.config.web_scrapbook_files);
 
         // start collecting various entries in separate threads here
+        println!("spawning aichat session file entry collection...");
+        let aichat_session_path_sender = path_sender.clone();
+        spawn(move || {
+            aichat_session_files.collect_entries(aichat_session_path_sender);
+        });
+
         println!("spawning markdown file entry collection...");
         let markdown_path_sender = path_sender.clone();
         spawn(move || {
@@ -328,6 +338,9 @@ impl FulltextIndex {
                 }
                 IndexPath::WebScrapBookFile(path_buf) => {
                     WebScrapbookFiles::convert_path_to_entry(&path_buf)
+                }
+                IndexPath::AichatSessionFile(path_buf) => {
+                    AichatSessionFiles::convert_path_to_entry(&path_buf)
                 }
             };
 

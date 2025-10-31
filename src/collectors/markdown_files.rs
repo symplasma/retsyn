@@ -1,4 +1,5 @@
 use ignore::Walk;
+use tracing::{debug, warn};
 
 use crate::{
     config::PathList,
@@ -39,14 +40,14 @@ impl MarkdownFiles {
                     // TODO switch to the tracing crate
                     Err(e) => {
                         // TODO collect these errors so the user can see what is not being indexed properly
-                        println!("could not open path: {}", e)
+                        warn!("could not open path: {}", e)
                     }
 
                     Ok(entry) => {
                         if entry.file_type().map(|e| e.is_file()).unwrap_or(false) {
                             // TODO check the file type here
                             // if this is a file, send it to the fulltext index to check if it is already indexed and up to date
-                            println!("sending path {}...", entry.path().to_string_lossy());
+                            debug!("sending path {}...", entry.path().to_string_lossy());
                             sender
                                 .send(IndexPath::MarkdownFile(entry.path().to_path_buf()))
                                 .expect("should be able to send new entries to index");
@@ -125,7 +126,10 @@ impl MarkdownFiles {
     }
 
     pub(crate) fn convert_path_to_entry(path: &Path) -> IndexEntry {
-        println!("attempting to convert path to entry...");
+        debug!(
+            "attempting to convert {} to entry...",
+            path.to_string_lossy()
+        );
 
         // TODO properly handle non UTF-8 file contents
         // TODO handle very large files efficiently

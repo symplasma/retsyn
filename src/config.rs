@@ -3,6 +3,7 @@ use confique::toml;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
+use tracing::info;
 
 pub(crate) type PathList = Vec<PathBuf>;
 
@@ -51,6 +52,10 @@ impl Conf {
         let template = toml::template::<Conf>(confique::toml::FormatOptions::default());
 
         // Write to file
+        info!(
+            "writing default config to: {}...",
+            config_path.to_string_lossy()
+        );
         fs::write(&config_path, template)?;
 
         Ok(config_path)

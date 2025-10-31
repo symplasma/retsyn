@@ -1,6 +1,7 @@
 use dom_query::Document;
 use ignore::WalkBuilder;
 use readability_rust::{Readability, ReadabilityOptions};
+use tracing::{debug, warn};
 
 use crate::{
     config::PathList,
@@ -44,7 +45,7 @@ impl WebScrapbookFiles {
                     // TODO switch to the tracing crate
                     Err(e) => {
                         // TODO collect these errors so the user can see what is not being indexed properly
-                        println!("could not open path: {}", e)
+                        warn!("could not open path: {}", e)
                     }
 
                     Ok(entry) => {
@@ -52,7 +53,7 @@ impl WebScrapbookFiles {
                         if web_scrapbook_index.exists() && web_scrapbook_index.is_file() {
                             // TODO check the file type here
                             // if this is a file, send it to the fulltext index to check if it is already indexed and up to date
-                            println!("sending path {}...", web_scrapbook_index.to_string_lossy());
+                            debug!("sending path {}...", web_scrapbook_index.to_string_lossy());
                             sender
                                 .send(IndexPath::WebScrapBookFile(web_scrapbook_index))
                                 .expect("should be able to send new entries to index");
@@ -66,7 +67,10 @@ impl WebScrapbookFiles {
     }
 
     pub(crate) fn convert_path_to_entry(path: &Path) -> IndexEntry {
-        println!("attempting to convert path to entry...");
+        debug!(
+            "attempting to convert {} to entry...",
+            path.to_string_lossy()
+        );
 
         // TODO properly handle non UTF-8 file contents
         // TODO handle very large files efficiently, maybe switch to a streaming library

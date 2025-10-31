@@ -46,12 +46,22 @@ fn main() -> eframe::Result {
     let cli = Cli::parse();
 
     // Initialize tracing. We're doing this after reading args from the CLI so we can set the log file path if requested
+    #[expect(
+        clippy::print_stderr,
+        reason = "If we cannot setup tracing, we need to let the user know, but we cannot do so via tracing."
+    )]
     if let Err(e) = setup_tracing() {
         eprintln!("Failed to setup tracing: {}", e);
     }
 
     // Handle --default-config flag
     if cli.default_config {
+        #[expect(
+            clippy::print_stderr,
+            clippy::print_stdout,
+            reason = "We want to notify the user on the CLI directly rather than trace these actions."
+        )]
+        // TODO unify error handling and return error to be displayed later
         match Conf::write_default_config() {
             Ok(path) => {
                 println!("Default config written to: {}", path.display());
@@ -66,6 +76,12 @@ fn main() -> eframe::Result {
 
     // Handle --clear-index flag
     if cli.clear_index {
+        #[expect(
+            clippy::print_stderr,
+            clippy::print_stdout,
+            reason = "We want to notify the user on the CLI directly rather than trace these actions."
+        )]
+        // TODO unify error handling and return error to be displayed later
         match FulltextIndex::clear_index() {
             Ok(()) => {
                 println!("Search index cleared successfully");

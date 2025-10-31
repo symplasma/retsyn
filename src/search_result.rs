@@ -8,6 +8,7 @@ use tantivy::{
     snippet::Snippet,
 };
 use time::{UtcOffset, format_description::well_known::Rfc2822};
+use tracing::{info, warn};
 
 use crate::fulltext_index::FulltextIndex;
 
@@ -121,16 +122,22 @@ impl SearchResult {
     }
 
     pub(crate) fn open(&self) {
-        println!("Revealing item: {}", self.path);
+        info!("Revealing item: {}", self.path);
         if let Some(path) = PathBuf::from(self.path.clone()).parent() {
-            // TODO handle errors in open and display them to the user
-            open::with(path, "xdg-open");
+            // TODO handle errors in open and display them to the user in the UI
+            match open::with(path, "xdg-open") {
+                Ok(_) => info!("successfully opened item: {}", self.path),
+                Err(e) => warn!("unable to open item: {}", e),
+            }
         }
     }
 
     pub(crate) fn reveal(&self) {
-        println!("Opening item: {}", self.path);
-        // TODO handle errors in open and display them to the user
-        open::that(self.path.clone());
+        info!("Opening item: {}", self.path);
+        // TODO handle errors in reveal and display them to the user in the UI
+        match open::that(self.path.clone()) {
+            Ok(_) => info!("successfully revealed item: {}", self.path),
+            Err(e) => warn!("unable to reveal item: {}", e),
+        }
     }
 }

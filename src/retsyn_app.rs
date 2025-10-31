@@ -12,6 +12,7 @@ use confique::{
 use directories::ProjectDirs;
 use egui::{Align, Button, Color32, DragValue, Layout, RichText};
 use tantivy::TantivyError;
+use tracing::{error, info, warn};
 
 use crate::{
     config::Conf,
@@ -55,9 +56,20 @@ impl RetsynApp {
             Ok(config) => config,
             Err(_) => {
                 // If config doesn't exist, create a default one
-                Conf::builder().env().load().unwrap_or_else(|_| {
+                Conf::builder().env().load().unwrap_or_else(|e| {
                     // If even that fails, use hardcoded defaults
-                    println!("{}", toml::template::<Conf>(FormatOptions::default()));
+                    error!(
+                        "could not load config from {}: {}",
+                        config_file.to_string_lossy(),
+                        e
+                    );
+
+                    // not sure what this println was doing, maybe it was supposed to write a default config file
+                    // println!("{}", toml::template::<Conf>(FormatOptions::default()));
+
+                    // TODO notify the user that an error has occurred
+
+                    // TODO unify errors and return error rather than exiting here
                     exit(0)
                 })
             }
@@ -291,25 +303,32 @@ impl RetsynApp {
 
                         match self.config.save() {
                             Ok(path) => {
-                                println!("Configuration saved to: {}", path.display());
+                                #[expect(
+                                    clippy::print_stdout,
+                                    reason = "We need to notify the user that the file was saved."
+                                )]
+                                // we're scoping the expect above to only this print statement
+                                {
+                                    println!("Configuration saved to: {}", path.display());
+                                }
 
                                 // Rebuild the index with new configuration
                                 match FulltextIndex::new(self.config.clone()) {
                                     Ok(mut index) => {
                                         if let Err(e) = index.update() {
-                                            println!("Error updating index: {}", e);
+                                            warn!("Error updating index: {}", e);
                                         } else {
                                             self.fulltext_index = Some(index);
                                             self.show_config = false;
                                         }
                                     }
                                     Err(e) => {
-                                        println!("Error creating index: {}", e);
+                                        warn!("Error creating index: {}", e);
                                     }
                                 }
                             }
                             Err(e) => {
-                                println!("Error saving configuration: {}", e);
+                                warn!("Error saving configuration: {}", e);
                             }
                         }
                     }
@@ -714,7 +733,7 @@ impl RetsynApp {
 
         // act on the double clicked item
         if let Some((idx, shift_held)) = clicked_item {
-            println!("opening item {} with shift_helf = {}", idx, shift_held);
+            info!("opening item {} with shift_held = {}", idx, shift_held);
             self.open_item(*idx, *shift_held);
         }
 

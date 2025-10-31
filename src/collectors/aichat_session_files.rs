@@ -1,5 +1,6 @@
 use ignore::WalkBuilder;
 use serde::Deserialize;
+use tracing::{debug, warn};
 
 use crate::{
     config::PathList,
@@ -8,7 +9,6 @@ use crate::{
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::exit,
 };
 
 #[derive(Deserialize)]
@@ -62,7 +62,7 @@ impl AichatSessionFiles {
                     // TODO switch to the tracing crate
                     Err(e) => {
                         // TODO collect these errors so the user can see what is not being indexed properly
-                        println!("could not open path: {}", e)
+                        warn!("could not open path: {}", e)
                     }
 
                     Ok(entry) => {
@@ -70,7 +70,7 @@ impl AichatSessionFiles {
                         if aichat_session_file.exists() && aichat_session_file.is_file() {
                             // TODO check the file type here
                             // if this is a file, send it to the fulltext index to check if it is already indexed and up to date
-                            println!("sending path {}...", aichat_session_file.to_string_lossy());
+                            debug!("sending path {}...", aichat_session_file.to_string_lossy());
                             sender
                                 .send(IndexPath::AichatSessionFile(
                                     aichat_session_file.to_path_buf(),
@@ -87,7 +87,7 @@ impl AichatSessionFiles {
     }
 
     pub(crate) fn convert_path_to_entry(path: &Path) -> IndexEntry {
-        println!(
+        debug!(
             "attempting to convert {} to entry...",
             path.to_string_lossy()
         );

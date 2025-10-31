@@ -20,6 +20,7 @@ use tantivy::{
     snippet::SnippetGenerator,
 };
 use time::OffsetDateTime;
+use tracing::{debug, info, warn};
 
 use crate::{
     collectors::{
@@ -94,7 +95,7 @@ impl FulltextIndex {
         // create the index
         let index_path = PROJECT_DIRS.cache_dir().join("tantivy");
         create_dir_all(&index_path)?;
-        println!(
+        info!(
             "tantivy index directory is: {}",
             index_path.to_string_lossy()
         );
@@ -121,11 +122,11 @@ impl FulltextIndex {
 
         // if the indexing_epoch_file exists `open_or_create` the existing index, otherwise `create` a new one
         let index = if last_indexing_epoch.is_some() {
-            println!("opening or creating tantivy index");
+            debug!("opening or creating tantivy index");
             // calling open or create just in case the epoch file exists but the actual index was deleted
             Index::open_or_create(index_dir, schema.clone())?
         } else {
-            println!("creating new tantivy index");
+            debug!("creating new tantivy index");
             Index::create(index_dir, schema.clone(), IndexSettings::default())?
         };
 
@@ -166,13 +167,13 @@ impl FulltextIndex {
         // Remove the index directory if it exists
         if index_path.exists() {
             fs::remove_dir_all(&index_path)?;
-            println!("Removed index directory: {}", index_path.display());
+            info!("Removed index directory: {}", index_path.display());
         }
 
         // Remove the indexing epoch file if it exists
         if INDEXING_EPOCH_PATH.exists() {
             fs::remove_file(&*INDEXING_EPOCH_PATH)?;
-            println!(
+            info!(
                 "Removed indexing epoch file: {}",
                 INDEXING_EPOCH_PATH.display()
             );
@@ -195,18 +196,18 @@ impl FulltextIndex {
         path_receiver: IndexPathReceiver,
         path_converter_sender: IndexPathSender,
     ) {
-        println!("converting paths to entries...");
         for index_path in path_receiver {
             // the file path on disk
             // TODO we'll need to modify this or add a volume identifier if we index from more than one host
             let path = index_path.path();
             let path_str = path.to_string_lossy();
+            debug!("checking if {} needs to be updated...", path_str);
 
             let mut entry_up_to_date = false;
 
             // see if the document is already present in the index
             if self.file_is_indexed(path) {
-                // println!("found document in index: {}", &entry_path);
+                debug!("found document in index: {}", &path_str);
                 // if the last_indexing_epoch is Some and the file's last update time is later than it, then delete the entry from the index by path
                 entry_up_to_date = self.entry_up_to_date(&path);
 
@@ -231,7 +232,7 @@ impl FulltextIndex {
 
     /// Updates the fulltext index by reading the IndexEntries from the receiver
     pub(crate) fn update(&mut self) -> Result<(), TantivyError> {
-        println!("updating the fulltext index...");
+        info!("updating the fulltext index...");
         let indexed_at_time = DateTime::from_utc(OffsetDateTime::now_utc());
 
         // setting up the indexing epoch
@@ -248,19 +249,19 @@ impl FulltextIndex {
         let web_scrapbook_files = WebScrapbookFiles::new(&self.config.web_scrapbook_files);
 
         // start collecting various entries in separate threads here
-        println!("spawning aichat session file entry collection...");
+        info!("spawning aichat session file entry collection...");
         let aichat_session_path_sender = path_sender.clone();
         spawn(move || {
             aichat_session_files.collect_entries(aichat_session_path_sender);
         });
 
-        println!("spawning markdown file entry collection...");
+        info!("spawning markdown file entry collection...");
         let markdown_path_sender = path_sender.clone();
         spawn(move || {
             markdown_files.collect_entries(markdown_path_sender);
         });
 
-        println!("spawning web scrapbook file entry collection...");
+        info!("spawning web scrapbook file entry collection...");
         let web_scrapbook_path_sender = path_sender.clone();
         spawn(move || {
             web_scrapbook_files.collect_entries(web_scrapbook_path_sender);
@@ -271,14 +272,14 @@ impl FulltextIndex {
 
         // this is basically happening synchronously here since it depends on the tantivy index
         // might need to wrap the indexes in Arcs and possibly Mutexes to make this asynchronous
-        println!("filtering paths...");
+        info!("filtering paths...");
         self.filter_paths_to_update(path_receiver, path_converter_sender);
 
-        println!("spawning path to entry converter...");
+        info!("spawning path to entry converter...");
         spawn(move || Self::convert_paths_to_entries(path_converter_receiver, entry_sender));
 
         // loop through all of the IndexEntries on the receiver and add them to the index
-        println!("starting entry indexing loop...");
+        info!("starting entry indexing loop...");
         loop {
             // TODO consider switching this back to a normal iter call unless we want to commit in batches
             match entry_receiver.try_recv() {
@@ -294,11 +295,11 @@ impl FulltextIndex {
         }
 
         // commit the changes so that searchers can see the changes
-        println!("committing changes to fulltext index...");
+        info!("committing changes to fulltext index...");
         self.writer.commit()?;
 
         // write the epoch of the last indexing to use for incremental updates
-        println!(
+        info!(
             "writing indexing epoch {} to: {}",
             indexing_epoch,
             INDEXING_EPOCH_PATH.to_string_lossy()
@@ -321,17 +322,17 @@ impl FulltextIndex {
 
         // add the document to the index
         match self.writer.add_document(tantivy_doc) {
-            Ok(_) => println!("adding document to index: {}", &entry.path()),
+            Ok(_) => info!("adding document to index: {}", &entry.path()),
             // TODO switch to the tracing crate
             Err(e) => {
-                println!("could not index document: {}: {}", &entry.path(), e)
+                warn!("could not index document: {}: {}", &entry.path(), e)
             }
         }
     }
 
     fn convert_paths_to_entries(path_receiver: IndexPathReceiver, entry_sender: IndexEntrySender) {
-        println!("attempting to convert path to entry...");
         for index_path in path_receiver {
+            debug!("attempting to convert {} to entry...", index_path);
             let new_entry = match index_path {
                 IndexPath::MarkdownFile(path_buf) => {
                     MarkdownFiles::convert_path_to_entry(&path_buf)
@@ -424,7 +425,7 @@ impl FulltextIndex {
         // see if the document is already present in the index
         match searcher.search(&query, &Count) {
             Err(e) => {
-                println!("error searching for document: {}", e);
+                warn!("error searching for document: {}", e);
                 false
             }
             Ok(count) => {
@@ -442,17 +443,17 @@ impl FulltextIndex {
     pub(crate) fn entry_up_to_date(&self, entry: &Path) -> bool {
         match self.last_indexing_epoch {
             None => {
-                println!("last indexing epoch is not set");
+                info!("last indexing epoch is not set");
                 true
             }
             Some(last_indexing_epoch) => match entry.metadata() {
                 Err(e) => {
-                    println!("could not get metadata: {}", e);
+                    warn!("could not get metadata: {}", e);
                     true
                 }
                 Ok(metadata) => match metadata.modified() {
                     Err(e) => {
-                        println!("could not get modification date: {}", e);
+                        warn!("could not get modification date: {}", e);
                         true
                     }
                     Ok(file_modified) => {

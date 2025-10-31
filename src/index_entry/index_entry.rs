@@ -14,6 +14,7 @@ pub(crate) type IndexEntryReceiver = Receiver<IndexEntry>;
 pub(crate) type IndexPathSender = Sender<IndexPath>;
 pub(crate) type IndexPathReceiver = Receiver<IndexPath>;
 
+// AI! please implement `std::fmt::Display` for IndexPath
 pub(crate) enum IndexPath {
     MarkdownFile(PathBuf),
     WebScrapBookFile(PathBuf),

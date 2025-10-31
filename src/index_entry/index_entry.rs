@@ -1,4 +1,5 @@
 use std::{
+    fmt,
     path::{Path, PathBuf},
     sync::mpsc::{Receiver, Sender},
 };
@@ -14,11 +15,20 @@ pub(crate) type IndexEntryReceiver = Receiver<IndexEntry>;
 pub(crate) type IndexPathSender = Sender<IndexPath>;
 pub(crate) type IndexPathReceiver = Receiver<IndexPath>;
 
-// AI! please implement `std::fmt::Display` for IndexPath
 pub(crate) enum IndexPath {
     MarkdownFile(PathBuf),
     WebScrapBookFile(PathBuf),
     AichatSessionFile(PathBuf),
+}
+
+impl fmt::Display for IndexPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            IndexPath::MarkdownFile(path) => write!(f, "MarkdownFile({})", path.display()),
+            IndexPath::WebScrapBookFile(path) => write!(f, "WebScrapBookFile({})", path.display()),
+            IndexPath::AichatSessionFile(path) => write!(f, "AichatSessionFile({})", path.display()),
+        }
+    }
 }
 
 impl IndexPath {

@@ -5,7 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.5 (2025-10-31)
+
+### Chore
+
+ - <csr-id-bb98f4425945fb432c5db8c467a2cdb17fa6ea59/> Enable clippy print lints and switch to tracing
+
+### New Features
+
+ - <csr-id-c0f9f3a2d1664bccd001aa37a11af591f299a1d8/> implement Display trait for IndexPath enum
+ - <csr-id-0bb5c89287050af725daa074bb8f35684ee299d4/> add Display trait placeholder comment for IndexPath enum
+ - <csr-id-8ff99f7d8b27b5090975e6fc6c7cb6031e81ba66/> Add tracing to a rotating log file
+ - <csr-id-0fb60865ea9dc6a61e91cafa970f9514ce6541de/> Add AichatSessionFiles collector
+ - <csr-id-a06369fee536b56f48720cfd8ed2e3f342c8ccc9/> Run articles through arc90 Readability
+ - <csr-id-37fbe8d28632f2e237db557897b402877d902a5f/> Add indexing of WebScrapbook Archives
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 11 commits contributed to the release over the course of 6 calendar days.
+ - 8 days passed between releases.
+ - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Add rust crates to design docs ([`36a1a30`](https://github.com/symplasma/retsyn/commit/36a1a30faf5863db82220f09bfcd02ec30892aa7))
+    - Enable clippy print lints and switch to tracing ([`bb98f44`](https://github.com/symplasma/retsyn/commit/bb98f4425945fb432c5db8c467a2cdb17fa6ea59))
+    - Implement Display trait for IndexPath enum ([`c0f9f3a`](https://github.com/symplasma/retsyn/commit/c0f9f3a2d1664bccd001aa37a11af591f299a1d8))
+    - Add Display trait placeholder comment for IndexPath enum ([`0bb5c89`](https://github.com/symplasma/retsyn/commit/0bb5c89287050af725daa074bb8f35684ee299d4))
+    - Add tracing to a rotating log file ([`8ff99f7`](https://github.com/symplasma/retsyn/commit/8ff99f7d8b27b5090975e6fc6c7cb6031e81ba66))
+    - Add features ([`8e66261`](https://github.com/symplasma/retsyn/commit/8e6626111e7fe1b2f05caf8392b36447919743e7))
+    - Add AichatSessionFiles collector ([`0fb6086`](https://github.com/symplasma/retsyn/commit/0fb60865ea9dc6a61e91cafa970f9514ce6541de))
+    - Run articles through arc90 Readability ([`a06369f`](https://github.com/symplasma/retsyn/commit/a06369fee536b56f48720cfd8ed2e3f342c8ccc9))
+    - Add indexing of WebScrapbook Archives ([`37fbe8d`](https://github.com/symplasma/retsyn/commit/37fbe8d28632f2e237db557897b402877d902a5f))
+    - Add WebScrapbookFiles collector ([`efc4d00`](https://github.com/symplasma/retsyn/commit/efc4d0017ddf1bb4d53a3daaa15932660e6f9581))
+    - Add semantic search crates ([`2924616`](https://github.com/symplasma/retsyn/commit/292461662082b657529bfefa718f93ae8441c9c8))
+</details>
+
 ## v0.1.4 (2025-10-23)
+
+<csr-id-8e0b24605debea5acd07494882ec9e2b820ef577/>
+<csr-id-da581c19ff4cb413cfb370219080d89cb4e890ce/>
 
 ### New Features
 
@@ -27,7 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 9 commits contributed to the release over the course of 1 calendar day.
+ - 10 commits contributed to the release over the course of 1 calendar day.
  - 2 days passed between releases.
  - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -39,6 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release retsyn v0.1.4 ([`936309c`](https://github.com/symplasma/retsyn/commit/936309c85d0ba5df2ea45f67213ce55a0b73afa8))
     - Add result limit to UI ([`4a2d90c`](https://github.com/symplasma/retsyn/commit/4a2d90c4f6ad3c789e727641c9549b59aaea7ab5))
     - Variablize and increase the result limit ([`8e0b246`](https://github.com/symplasma/retsyn/commit/8e0b24605debea5acd07494882ec9e2b820ef577))
     - Add query conjunction toggle ([`45ce9f9`](https://github.com/symplasma/retsyn/commit/45ce9f9104133309e7cef3a3f06db02b5b9dee80))

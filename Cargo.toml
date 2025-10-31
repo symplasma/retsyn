@@ -23,7 +23,7 @@ path = "src/main.rs"
 [dependencies]
 atomicwrites = "0.4.4"
 clap = { version = "4.5", features = ["derive"] }
-confique = { version = "0.3.1", features = ["toml"] }
+confique = { version = "0.4.0", features = ["toml"] }
 directories = "6.0.0"
 dom_query = "0.23.1"
 eframe = { version = "0.33", default-features = false, features = [
@@ -36,7 +36,7 @@ egui_commonmark = { version = "0.22.0", features = [
     "better_syntax_highlighting",
     "svg",
 ] }
-ignore = "0.4.24"
+ignore = "0.4.25"
 open = "5.3.2"
 readability-rust = "0.1.0"
 rfd = "0.15.4"

@@ -88,3 +88,44 @@
 
 - [GPUI — Rust GUI library // Lib.rs](https://lib.rs/crates/gpui)
 - [gpui](https://www.gpui.rs/)
+
+## HTML to Markdown
+
+- [‘html to markdown’ search // Lib.rs](https://lib.rs/search?q=html+to+markdown)
+- [html_to_markdown — Rust text processing library // Lib.rs](https://lib.rs/crates/html_to_markdown)
+- [htmd — Rust text processing library // Lib.rs](https://lib.rs/crates/htmd)
+- [mdka — Rust utility // Lib.rs](https://lib.rs/crates/mdka)
+- [html-to-markdown-rs — Rust text processing library // Lib.rs](https://lib.rs/crates/html-to-markdown-rs)
+- [HTML2MD — Rust utility // Lib.rs](https://lib.rs/crates/html2md)
+- [html2md-rs — Rust parser // Lib.rs](https://lib.rs/crates/html2md-rs)
+- [markdown-tool — command-line utility in Rust // Lib.rs](https://lib.rs/crates/markdown-tool)
+- [fast_html2md 0.0.48 [minimal maintenance] // Lib.rs](https://lib.rs/crates/fast_html2md)
+
+## HTML Parsers
+
+- [DomSmoothie — Rust parser // Lib.rs](https://lib.rs/crates/dom_smoothie)
+- [#html-parser // Lib.rs](https://lib.rs/keywords/html-parser)
+- [tl — Rust parser // Lib.rs](https://lib.rs/crates/tl)
+- [servo/html5ever: High-performance browser-grade HTML5 parser](https://github.com/servo/html5ever)
+- [untitaker/html5gum: A WHATWG-compliant HTML5 tokenizer and tag soup parser](https://github.com/untitaker/html5gum)
+- [lol_html — Rust parser // Lib.rs](https://lib.rs/crates/lol_html)
+- [html2text — Rust text processing library // Lib.rs](https://lib.rs/crates/html2text)
+- [DOM_QUERY — Rust web dev library // Lib.rs](https://lib.rs/crates/dom_query)
+- [htmlite — Rust web dev library // Lib.rs](https://lib.rs/crates/htmlite)
+- [DOM_FINDER — Rust web dev library // Lib.rs](https://lib.rs/crates/dom_finder)
+- [html-filter — Rust parser // Lib.rs](https://lib.rs/crates/html-filter)
+- [html-query — Rust application // Lib.rs](https://lib.rs/crates/html-query)
+- [Tagparser — Rust utility // Lib.rs](https://lib.rs/crates/tagparser)
+
+## arc90 Readability
+
+- [‘readability’ search // Lib.rs](https://lib.rs/search?q=readability)
+- [readability-rust — Rust utility // Lib.rs](https://lib.rs/crates/readability-rust)
+- [Readability in readability_rust - Rust](https://docs.rs/readability-rust/latest/readability_rust/struct.Readability.html)
+- [#readability // Lib.rs](https://lib.rs/keywords/readability)
+- [readable_url — Rust utility // Lib.rs](https://lib.rs/crates/readable_url)
+- [readability — Rust text processing library // Lib.rs](https://lib.rs/crates/readability)
+- [ArticleScraper — Rust web dev library // Lib.rs](https://lib.rs/crates/article_scraper)
+- [article-extractor — Rust library // Lib.rs](https://lib.rs/crates/article-extractor)
+- [readability-text-cleanup — Rust implementation // Lib.rs](https://lib.rs/crates/readability-text-cleanup)
+- [llm_readability — Rust web dev library // Lib.rs](https://lib.rs/crates/llm_readability)

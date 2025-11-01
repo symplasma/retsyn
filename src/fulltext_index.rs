@@ -3,13 +3,16 @@ use std::{
     fs::{self, create_dir_all},
     io::Write,
     path::{Path, PathBuf},
-    sync::{LazyLock, mpsc::channel},
+    sync::{
+        LazyLock,
+        mpsc::{Receiver, Sender, channel},
+    },
     thread::{self, spawn},
     time::Duration,
 };
 use tantivy::{
-    DateTime, Index, IndexReader, IndexSettings, IndexWriter, ReloadPolicy, TantivyDocument,
-    TantivyError, Term,
+    Index, IndexReader, IndexSettings, IndexWriter, ReloadPolicy, TantivyDocument, TantivyError,
+    Term,
     collector::{Count, TopDocs},
     directory::{ManagedDirectory, MmapDirectory},
     query::{QueryParser, QueryParserError, TermQuery},
@@ -31,6 +34,7 @@ use crate::{
     index_entry::index_entry::{
         IndexEntry, IndexEntrySender, IndexPath, IndexPathReceiver, IndexPathSender,
     },
+    messages::{index_request::IndexRequest, index_results::IndexResults},
     retsyn_app::PROJECT_DIRS,
     search_result::SearchResult,
 };
@@ -48,12 +52,25 @@ const PATH: &str = "path";
 const TITLE: &str = "title";
 const BODY: &str = "body";
 
+#[derive(Debug)]
+pub(crate) enum IndexStatus {
+    Initializing,
+    CollectingPaths,
+    FilteringPaths,
+    UpdatingIndex,
+    CommittingChanges,
+    UpToDate,
+}
+
 pub struct FulltextIndex {
+    // status: IndexStatus,
     config: Conf,
     last_indexing_epoch: Option<OffsetDateTime>,
     index: Index,
     reader: IndexReader,
     writer: IndexWriter,
+    request_receiver: Receiver<IndexRequest>,
+    results_sender: Sender<IndexResults>,
     pub(crate) source_field: TantivyField,
     pub(crate) indexed_at_field: TantivyField,
     pub(crate) path_field: TantivyField,
@@ -65,7 +82,16 @@ pub(crate) type SearchResultsAndErrors =
     Result<(Vec<SearchResult>, Vec<QueryParserError>), TantivyError>;
 
 impl FulltextIndex {
-    pub(crate) fn new(config: Conf) -> Result<Self, TantivyError> {
+    fn send_status(&self, status: IndexStatus) {
+        self.results_sender
+            .send(IndexResults::Status(status))
+            .expect("should be able to send status");
+    }
+    pub(crate) fn new(
+        config: Conf,
+        request_receiver: Receiver<IndexRequest>,
+        results_sender: Sender<IndexResults>,
+    ) -> Result<Self, TantivyError> {
         // setup the schema
         let mut schema_builder = Schema::builder();
         // the filepath, we're setting up custom options so we can reliably search paths
@@ -147,11 +173,14 @@ impl FulltextIndex {
         let body_field = schema.get_field(BODY).unwrap();
 
         Ok(Self {
+            // status: IndexStatus::Initializing,
             config,
             last_indexing_epoch,
             index,
             reader,
             writer,
+            request_receiver,
+            results_sender,
             source_field,
             indexed_at_field,
             path_field,
@@ -192,10 +221,11 @@ impl FulltextIndex {
 
     /// Loop over the paths that the collectors have found, see if they are indexed and up to date. If so pass them on to the loader.
     pub(crate) fn filter_paths_to_update(
-        &self,
+        &mut self,
         path_receiver: IndexPathReceiver,
         path_converter_sender: IndexPathSender,
     ) {
+        self.send_status(IndexStatus::FilteringPaths);
         for index_path in path_receiver {
             // the file path on disk
             // TODO we'll need to modify this or add a volume identifier if we index from more than one host
@@ -230,14 +260,8 @@ impl FulltextIndex {
         drop(path_converter_sender);
     }
 
-    /// Updates the fulltext index by reading the IndexEntries from the receiver
-    pub(crate) fn update(&mut self) -> Result<(), TantivyError> {
-        info!("updating the fulltext index...");
-        let indexed_at_time = DateTime::from_utc(OffsetDateTime::now_utc());
-
-        // setting up the indexing epoch
-        let indexing_epoch_file = AtomicFile::new(&*INDEXING_EPOCH_PATH, AllowOverwrite);
-        let indexing_epoch = OffsetDateTime::now_utc().unix_timestamp();
+    pub(crate) fn start_collectors(&mut self) -> Receiver<IndexEntry> {
+        self.send_status(IndexStatus::CollectingPaths);
 
         let (path_sender, path_receiver) = channel();
         let (path_converter_sender, path_converter_receiver) = channel();
@@ -278,6 +302,22 @@ impl FulltextIndex {
         info!("spawning path to entry converter...");
         spawn(move || Self::convert_paths_to_entries(path_converter_receiver, entry_sender));
 
+        entry_receiver
+    }
+
+    /// Updates the fulltext index by reading the IndexEntries from the receiver
+    pub(crate) fn update(
+        &mut self,
+        entry_receiver: Receiver<IndexEntry>,
+    ) -> Result<(), TantivyError> {
+        info!("updating the fulltext index...");
+
+        // setting up the indexing epoch
+        let indexing_epoch_file = AtomicFile::new(&*INDEXING_EPOCH_PATH, AllowOverwrite);
+        let indexing_epoch = OffsetDateTime::now_utc().unix_timestamp();
+
+        self.send_status(IndexStatus::UpdatingIndex);
+
         // loop through all of the IndexEntries on the receiver and add them to the index
         info!("starting entry indexing loop...");
         loop {
@@ -292,7 +332,12 @@ impl FulltextIndex {
                     std::sync::mpsc::TryRecvError::Disconnected => break,
                 },
             }
+            if let Ok(request) = self.request_receiver.try_recv() {
+                self.search(request)
+            }
         }
+
+        self.send_status(IndexStatus::CommittingChanges);
 
         // commit the changes so that searchers can see the changes
         info!("committing changes to fulltext index...");
@@ -307,6 +352,8 @@ impl FulltextIndex {
         indexing_epoch_file
             .write(|f| f.write_all(indexing_epoch.to_string().as_bytes()))
             .expect("should be able to write to the indexing epoch file");
+
+        self.send_status(IndexStatus::UpToDate);
 
         Ok(())
     }
@@ -354,14 +401,7 @@ impl FulltextIndex {
         drop(entry_sender);
     }
 
-    pub(crate) fn search(
-        &self,
-        query: &str,
-        limit: usize,
-        lenient: bool,
-        query_conjunction: bool,
-        fuzziness: u8,
-    ) -> SearchResultsAndErrors {
+    pub(crate) fn search(&self, request: IndexRequest) {
         let searcher = self.reader.searcher();
         let title = self.title_field;
         let body = self.body_field;
@@ -370,43 +410,59 @@ impl FulltextIndex {
         // setup the query here
         let mut query_parser = QueryParser::for_index(&self.index, default_fields.clone());
 
-        if query_conjunction {
+        if request.query_conjunction {
             query_parser.set_conjunction_by_default();
         }
 
         // set fields fuzzy here
         // TODO add advanced search config where individual field can have its fuzziness set independently
-        if fuzziness > 0 {
+        if request.fuzziness > 0 {
             for field in &default_fields {
-                query_parser.set_field_fuzzy(*field, true, fuzziness, true);
+                query_parser.set_field_fuzzy(*field, true, request.fuzziness, true);
             }
         }
 
         // parse the query here
-        let (query, query_errors) = if lenient {
-            query_parser.parse_query_lenient(query)
+        let (query, query_errors) = if request.lenient {
+            query_parser.parse_query_lenient(&request.query)
         } else {
-            match query_parser.parse_query(query) {
+            match query_parser.parse_query(&request.query) {
                 Ok(query) => (query, vec![]),
                 // if we have an error in non-lenient parsing, return with no results
-                Err(error) => return Ok((vec![], vec![error])),
+                Err(error) => {
+                    self.results_sender
+                        .send(IndexResults::SearchResults {
+                            opstamp: 0,
+                            results: Ok((vec![], vec![error])),
+                        })
+                        .expect("should be able to send results");
+
+                    return;
+                }
             }
         };
 
         // perform the search
-        let top_docs = searcher.search(&query, &TopDocs::with_limit(limit))?;
+        let top_docs = searcher
+            .search(&query, &TopDocs::with_limit(request.limit))
+            .unwrap();
 
         // create a snippet generator so we can draw snippets with highlights
-        let snippet_generator = SnippetGenerator::create(&searcher, &query, body)?;
+        let snippet_generator = SnippetGenerator::create(&searcher, &query, body).unwrap();
 
         let mut documents: Vec<SearchResult> = Vec::default();
         for (_score, doc_address) in top_docs {
-            let retrieved_doc: TantivyDocument = searcher.doc(doc_address)?;
+            let retrieved_doc: TantivyDocument = searcher.doc(doc_address).unwrap();
             let snippet = snippet_generator.snippet_from_doc(&retrieved_doc);
             documents.push(SearchResult::new(self, retrieved_doc, snippet));
         }
 
-        Ok((documents, query_errors))
+        self.results_sender
+            .send(IndexResults::SearchResults {
+                opstamp: 0,
+                results: Ok((documents, query_errors)),
+            })
+            .expect("should be able to send results");
     }
 
     pub(crate) fn file_is_indexed(&self, path: &Path) -> bool {

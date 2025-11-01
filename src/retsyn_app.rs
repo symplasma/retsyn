@@ -1,14 +1,15 @@
 use std::{
     process::exit,
-    sync::LazyLock,
+    sync::{
+        LazyLock,
+        mpsc::{Receiver, Sender, channel},
+    },
+    thread::spawn,
     time::{Duration, Instant},
     vec,
 };
 
-use confique::{
-    Config,
-    toml::{self, FormatOptions},
-};
+use confique::Config;
 use directories::ProjectDirs;
 use egui::{Align, Button, Color32, DragValue, Layout, RichText};
 use tantivy::TantivyError;
@@ -16,7 +17,8 @@ use tracing::{error, info, warn};
 
 use crate::{
     config::Conf,
-    fulltext_index::{FulltextIndex, SearchResultsAndErrors},
+    fulltext_index::{FulltextIndex, IndexStatus, SearchResultsAndErrors},
+    messages::{index_request::IndexRequest, index_results::IndexResults},
     search_result::SearchResult,
 };
 
@@ -27,6 +29,7 @@ pub(crate) static PROJECT_DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
 pub struct RetsynApp {
     search_text: String,
     last_search_text: String,
+    index_status: IndexStatus,
     matched_items: SearchResultsAndErrors,
     selected_index: Option<usize>,
     last_input_time: Option<Instant>,
@@ -40,11 +43,12 @@ pub struct RetsynApp {
     show_config: bool,
     config: Conf,
     config_markdown_files: Vec<String>,
-    fulltext_index: Option<FulltextIndex>,
     limit_results: usize,
     lenient: bool,
     query_conjunction: bool,
     fuzziness: u8,
+    request_sender: Sender<IndexRequest>,
+    results_receiver: Receiver<IndexResults>,
 }
 
 impl RetsynApp {
@@ -82,17 +86,26 @@ impl RetsynApp {
             .map(|p| p.to_string_lossy().to_string())
             .collect();
 
-        let fulltext_index = if config_exists {
-            let mut index = FulltextIndex::new(config.clone())?;
-            index.update()?;
-            Some(index)
-        } else {
-            None
-        };
+        let (request_sender, request_receiver) = channel();
+        let (results_sender, results_receiver) = channel();
+        if !config_exists {
+            // TODO unify errors and return an error instead
+            exit(1);
+        }
+
+        let fulltext_index_config = config.clone();
+        spawn(move || {
+            let mut index =
+                FulltextIndex::new(fulltext_index_config, request_receiver, results_sender)
+                    .unwrap();
+            let entry_receiver = index.start_collectors();
+            index.update(entry_receiver).unwrap();
+        });
 
         Ok(Self {
             search_text: String::new(),
             last_search_text: String::new(),
+            index_status: IndexStatus::Initializing,
             matched_items: Ok((vec![], vec![])),
             selected_index: None,
             last_input_time: None,
@@ -110,11 +123,12 @@ impl RetsynApp {
             show_config: !config_exists,
             config,
             config_markdown_files,
-            fulltext_index,
             limit_results: 50,
             lenient: true,
             query_conjunction: true,
             fuzziness: 0,
+            request_sender,
+            results_receiver,
         })
     }
 
@@ -131,24 +145,39 @@ impl RetsynApp {
         }
     }
 
+    pub(crate) fn search(
+        &self,
+        query: &str,
+        limit: usize,
+        lenient: bool,
+        query_conjunction: bool,
+        fuzziness: u8,
+    ) {
+        match self.request_sender.send(IndexRequest {
+            query: query.to_string(),
+            limit,
+            lenient,
+            query_conjunction,
+            fuzziness,
+        }) {
+            Ok(_) => todo!(),
+            Err(_) => warn!("should be able to send search request"),
+        }
+    }
+
     fn clear_search(&mut self) {
         self.search_text.clear();
         self.matched_items = Ok((vec![], vec![]));
         self.selected_index = None;
     }
 
-    fn update_search(&mut self) {
-        if self.search_text.is_empty() {
-            self.matched_items = Ok((vec![], vec![]));
-            self.selected_index = None;
-        } else if let Some(ref index) = self.fulltext_index {
-            self.matched_items = index.search(
-                &self.search_text,
-                self.limit_results,
-                self.lenient,
-                self.query_conjunction,
-                self.fuzziness,
-            );
+    fn retrieve_results(&mut self) {
+        if let Ok(index_results) = self.results_receiver.try_recv() {
+            match index_results {
+                IndexResults::Error(_) => todo!(),
+                IndexResults::Status(index_status) => self.index_status = index_status,
+                IndexResults::SearchResults { opstamp, results } => self.matched_items = results,
+            }
             self.selected_index = if self
                 .matched_items
                 .as_ref()
@@ -159,6 +188,22 @@ impl RetsynApp {
                 Some(0)
             }
         }
+    }
+
+    fn update_search(&mut self) {
+        if self.search_text.is_empty() {
+            self.matched_items = Ok((vec![], vec![]));
+            self.selected_index = None;
+        } else {
+            self.search(
+                &self.search_text,
+                self.limit_results,
+                self.lenient,
+                self.query_conjunction,
+                self.fuzziness,
+            );
+        }
+        self.retrieve_results();
         self.last_search_text = self.search_text.clone();
     }
 
@@ -312,36 +357,14 @@ impl RetsynApp {
                                     println!("Configuration saved to: {}", path.display());
                                 }
 
-                                // Rebuild the index with new configuration
-                                match FulltextIndex::new(self.config.clone()) {
-                                    Ok(mut index) => {
-                                        if let Err(e) = index.update() {
-                                            warn!("Error updating index: {}", e);
-                                        } else {
-                                            self.fulltext_index = Some(index);
-                                            self.show_config = false;
-                                        }
-                                    }
-                                    Err(e) => {
-                                        warn!("Error creating index: {}", e);
-                                    }
-                                }
+                                // TODO restart the index with new configuration. We need to add the ability to gracefully shutdown worker threads so that we can restart.
+                                // for now, we'll just exit
+                                exit(0)
                             }
                             Err(e) => {
                                 warn!("Error saving configuration: {}", e);
                             }
                         }
-                    }
-
-                    if self.fulltext_index.is_some() && ui.button("Cancel").clicked() {
-                        // Reload config from file
-                        self.config_markdown_files = self
-                            .config
-                            .markdown_files
-                            .iter()
-                            .map(|p| p.to_string_lossy().to_string())
-                            .collect();
-                        self.show_config = false;
                     }
                 });
 
@@ -634,6 +657,10 @@ impl RetsynApp {
                     );
                 });
 
+                // draw index status
+                ui.add_space(10.0);
+                ui.colored_label(Color32::BLUE, format!("{:?}", self.index_status));
+
                 // draw query errors
                 ui.add_space(10.0);
                 match &self.matched_items {
@@ -781,7 +808,7 @@ impl RetsynApp {
 
         // If config screen is showing, Escape closes it (only if index exists)
         if self.show_config {
-            if ctx.input(|i| i.key_pressed(egui::Key::Escape)) && self.fulltext_index.is_some() {
+            if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
                 self.show_config = false;
             }
             return;
@@ -839,6 +866,12 @@ impl eframe::App for RetsynApp {
         self.handle_key_events(ctx);
 
         self.handle_navigation(ctx);
+
+        if !matches!(self.index_status, IndexStatus::UpToDate) {
+            info!("requesting repaint since we're not yet up to date");
+            ctx.request_repaint_after(Duration::from_millis(16));
+            self.retrieve_results();
+        }
 
         if let Some(last_time) = self.last_input_time {
             if last_time.elapsed() >= self.debounce_duration

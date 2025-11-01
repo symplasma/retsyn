@@ -5,6 +5,7 @@ pub(crate) enum IndexResults {
     Error(String),
     Status(IndexStatus),
     SearchResults {
+        request_id: usize,
         opstamp: tantivy::Opstamp,
         results: SearchResultsAndErrors,
     },

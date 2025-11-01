@@ -29,6 +29,8 @@ pub(crate) static PROJECT_DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
 pub struct RetsynApp {
     search_text: String,
     last_search_text: String,
+    last_request_id: usize,
+    last_response_id: usize,
     index_status: IndexStatus,
     matched_items: SearchResultsAndErrors,
     selected_index: Option<usize>,
@@ -86,12 +88,13 @@ impl RetsynApp {
             .map(|p| p.to_string_lossy().to_string())
             .collect();
 
-        let (request_sender, request_receiver) = channel();
-        let (results_sender, results_receiver) = channel();
         if !config_exists {
             // TODO unify errors and return an error instead
             exit(1);
         }
+
+        let (request_sender, request_receiver) = channel();
+        let (results_sender, results_receiver) = channel();
 
         let fulltext_index_config = config.clone();
         spawn(move || {
@@ -100,11 +103,14 @@ impl RetsynApp {
                     .unwrap();
             let entry_receiver = index.start_collectors();
             index.update(entry_receiver).unwrap();
+            index.update_search_results();
         });
 
         Ok(Self {
             search_text: String::new(),
             last_search_text: String::new(),
+            last_request_id: 0,
+            last_response_id: 0,
             index_status: IndexStatus::Initializing,
             matched_items: Ok((vec![], vec![])),
             selected_index: None,
@@ -146,22 +152,30 @@ impl RetsynApp {
     }
 
     pub(crate) fn search(
-        &self,
+        &mut self,
         query: &str,
         limit: usize,
         lenient: bool,
         query_conjunction: bool,
         fuzziness: u8,
     ) {
+        self.last_request_id = self.last_request_id.saturating_add(1);
         match self.request_sender.send(IndexRequest {
+            request_id: self.last_request_id,
             query: query.to_string(),
             limit,
             lenient,
             query_conjunction,
             fuzziness,
         }) {
-            Ok(_) => todo!(),
-            Err(_) => warn!("should be able to send search request"),
+            Ok(_) => info!(
+                "sent search request {} for: {}",
+                self.last_request_id, query
+            ),
+            Err(e) => warn!(
+                "could not send search request {} for: {}: {}",
+                self.last_request_id, query, e
+            ),
         }
     }
 
@@ -176,7 +190,15 @@ impl RetsynApp {
             match index_results {
                 IndexResults::Error(_) => todo!(),
                 IndexResults::Status(index_status) => self.index_status = index_status,
-                IndexResults::SearchResults { opstamp, results } => self.matched_items = results,
+                IndexResults::SearchResults {
+                    request_id,
+                    // TODO check the opstamp to see if there has been an index commit since our last search
+                    opstamp,
+                    results,
+                } => {
+                    self.last_response_id = request_id;
+                    self.matched_items = results
+                }
             }
             self.selected_index = if self
                 .matched_items
@@ -196,7 +218,7 @@ impl RetsynApp {
             self.selected_index = None;
         } else {
             self.search(
-                &self.search_text,
+                &self.search_text.clone(),
                 self.limit_results,
                 self.lenient,
                 self.query_conjunction,
@@ -867,8 +889,13 @@ impl eframe::App for RetsynApp {
 
         self.handle_navigation(ctx);
 
-        if !matches!(self.index_status, IndexStatus::UpToDate) {
-            info!("requesting repaint since we're not yet up to date");
+        if !matches!(self.index_status, IndexStatus::UpToDate)
+            || self.last_request_id > self.last_response_id
+        {
+            info!(
+                "requesting repaint since we're not yet up to date. last_request_id: {} last_response_id: {}",
+                self.last_request_id, self.last_response_id
+            );
             ctx.request_repaint_after(Duration::from_millis(16));
             self.retrieve_results();
         }

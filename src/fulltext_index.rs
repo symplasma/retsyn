@@ -8,7 +8,7 @@ use std::{
         mpsc::{Receiver, Sender, channel},
     },
     thread::{self, spawn},
-    time::Duration,
+    time::{Duration, Instant},
 };
 use tantivy::{
     Index, IndexReader, IndexSettings, IndexWriter, ReloadPolicy, TantivyDocument, TantivyError,
@@ -320,20 +320,38 @@ impl FulltextIndex {
 
         // loop through all of the IndexEntries on the receiver and add them to the index
         info!("starting entry indexing loop...");
+        let indexing_start = Instant::now();
         loop {
-            // TODO consider switching this back to a normal iter call unless we want to commit in batches
+            // TODO consider switching to crossbeam's select macro
+            // TODO count the entries received or the time taken so we can commit in batches
+
+            if indexing_start.elapsed().as_secs() > 2 {
+                self.send_status(IndexStatus::CommittingChanges);
+
+                // commit the changes so that searchers can see the changes
+                info!("committing changes to fulltext index...");
+                self.writer
+                    .commit()
+                    .expect("should be able to commit index updates");
+
+                self.send_status(IndexStatus::UpdatingIndex);
+            }
+
+            // check for new entries in need of indexing
             match entry_receiver.try_recv() {
                 Ok(entry) => self.update_entry(&entry),
                 Err(e) => match e {
                     std::sync::mpsc::TryRecvError::Empty => {
-                        thread::sleep(Duration::from_millis(20));
+                        // check for new search requests
+                        if let Ok(request) = self.request_receiver.try_recv() {
+                            self.search(request)
+                        } else {
+                            thread::sleep(Duration::from_millis(20));
+                        }
                         continue;
                     }
                     std::sync::mpsc::TryRecvError::Disconnected => break,
                 },
-            }
-            if let Ok(request) = self.request_receiver.try_recv() {
-                self.search(request)
             }
         }
 
@@ -341,7 +359,9 @@ impl FulltextIndex {
 
         // commit the changes so that searchers can see the changes
         info!("committing changes to fulltext index...");
-        self.writer.commit()?;
+        self.writer
+            .commit()
+            .expect("should be able to commit index updates");
 
         // write the epoch of the last indexing to use for incremental updates
         info!(
@@ -356,6 +376,12 @@ impl FulltextIndex {
         self.send_status(IndexStatus::UpToDate);
 
         Ok(())
+    }
+
+    pub(crate) fn update_search_results(&self) {
+        while let Ok(request) = self.request_receiver.recv() {
+            self.search(request)
+        }
     }
 
     fn update_entry(&self, entry: &IndexEntry) {
@@ -432,6 +458,8 @@ impl FulltextIndex {
                 Err(error) => {
                     self.results_sender
                         .send(IndexResults::SearchResults {
+                            request_id: request.request_id,
+                            // TODO return the actual opstamp
                             opstamp: 0,
                             results: Ok((vec![], vec![error])),
                         })
@@ -457,12 +485,19 @@ impl FulltextIndex {
             documents.push(SearchResult::new(self, retrieved_doc, snippet));
         }
 
-        self.results_sender
-            .send(IndexResults::SearchResults {
-                opstamp: 0,
-                results: Ok((documents, query_errors)),
-            })
-            .expect("should be able to send results");
+        let num_hits = documents.len();
+        match self.results_sender.send(IndexResults::SearchResults {
+            request_id: request.request_id,
+            // TODO return the actual opstamp
+            opstamp: 0,
+            results: Ok((documents, query_errors)),
+        }) {
+            Ok(_) => info!(
+                "sending {} results for query {}: {}",
+                num_hits, request.request_id, request.query
+            ),
+            Err(e) => warn!("should be able to send results: {}", e),
+        };
     }
 
     pub(crate) fn file_is_indexed(&self, path: &Path) -> bool {

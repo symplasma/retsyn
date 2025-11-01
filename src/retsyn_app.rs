@@ -124,7 +124,7 @@ impl RetsynApp {
             scroll_to_selected: false,
             dark_mode: false,
             show_snippets: true,
-            show_preview: false,
+            show_preview: true,
             show_help: false,
             show_config: !config_exists,
             config,

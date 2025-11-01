@@ -51,7 +51,7 @@ This is a list of features. Implemented features are checked, the rest are plann
 - [ ] Display indexing status in UI
   - [ ] Count the number of paths discovered
   - [ ] Show a progress bar during indexing
-- [ ] Default to showing the preview
+- [x] Default to showing the preview
 - [ ] Auto-toggle snippets off when fuzzy search is active ([Snippet generation breaks with fuzzy fields · Issue #2576](https://github.com/quickwit-oss/tantivy/issues/2576))
 - [ ] Add highlighting of terms in title
 - [ ] Add highlighting of terms in preview

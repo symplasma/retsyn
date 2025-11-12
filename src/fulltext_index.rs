@@ -17,8 +17,8 @@ use tantivy::{
     directory::{ManagedDirectory, MmapDirectory},
     query::{QueryParser, QueryParserError, TermQuery},
     schema::{
-        DateOptions, Field as TantivyField, INDEXED, IndexRecordOption, STORED, Schema, TEXT,
-        TextFieldIndexing, TextOptions,
+        DateOptions, Field as TantivyField, INDEXED, IndexRecordOption, Schema, TextFieldIndexing,
+        TextOptions,
     },
     snippet::SnippetGenerator,
 };
@@ -103,30 +103,47 @@ fn last_indexing_epoch() -> Option<OffsetDateTime> {
 fn tantivy_schema() -> Schema {
     let mut schema_builder = Schema::builder();
 
-    // the filepath, we're setting up custom options so we can reliably search paths
-    let text_field_indexing = TextFieldIndexing::default()
-        // we do NOT want the field tokenized
-        .set_tokenizer("raw")
-        .set_index_option(IndexRecordOption::Basic);
-    let text_options = TextOptions::default()
-        .set_indexing_options(text_field_indexing)
-        .set_stored();
-    schema_builder.add_text_field(PATH, text_options);
-
-    // add the source, the module that discovered this file
-    schema_builder.add_text_field(SOURCE, TEXT | STORED);
-    // add the indexed at field
-    let date_opts = DateOptions::from(INDEXED)
+    // setup date handling optioss for the indexed_at field
+    let date_options = DateOptions::from(INDEXED)
         .set_stored()
         .set_fast()
         .set_precision(tantivy::schema::DateTimePrecision::Seconds);
-    schema_builder.add_date_field(INDEXED_AT, date_opts);
+
+    // setup custom options so we can reliably search paths i.e. we do NOT want them tokenized
+    let file_path_options = TextOptions::default()
+        .set_indexing_options(
+            TextFieldIndexing::default()
+                // we do NOT want the field tokenized
+                .set_tokenizer("raw")
+                .set_index_option(IndexRecordOption::Basic),
+        )
+        .set_stored();
+
+    // setup options for english search e.g. word stemming, the default tokenizer doesn't support that
+    let english_text_options = TextOptions::default()
+        .set_indexing_options(
+            TextFieldIndexing::default()
+                .set_tokenizer("en_stem")
+                .set_index_option(IndexRecordOption::WithFreqsAndPositions),
+        )
+        .set_stored();
+
+    // record when this was added to the index to facilitate updates
+    schema_builder.add_date_field(INDEXED_AT, date_options);
+
+    // the path on disk where this resource resides
+    schema_builder.add_text_field(PATH, file_path_options);
+
+    // add the source, the module that discovered this file
+    schema_builder.add_text_field(SOURCE, english_text_options.clone());
+
     // the title of the file
-    schema_builder.add_text_field(TITLE, TEXT | STORED);
+    schema_builder.add_text_field(TITLE, english_text_options.clone());
+
     // the main text of the file
-    schema_builder.add_text_field(BODY, TEXT | STORED);
-    let schema = schema_builder.build();
-    schema
+    schema_builder.add_text_field(BODY, english_text_options);
+
+    schema_builder.build()
 }
 
 impl FulltextIndex {

@@ -39,6 +39,9 @@ use crate::{
     search_result::SearchResult,
 };
 
+pub(crate) static INDEX_PATH: LazyLock<PathBuf> =
+    LazyLock::new(|| PROJECT_DIRS.cache_dir().join("tantivy"));
+
 pub(crate) static INDEXING_EPOCH_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
     PROJECT_DIRS
         .cache_dir()
@@ -81,70 +84,80 @@ pub struct FulltextIndex {
 pub(crate) type SearchResultsAndErrors =
     Result<(Vec<SearchResult>, Vec<QueryParserError>), TantivyError>;
 
+fn last_indexing_epoch() -> Option<OffsetDateTime> {
+    match INDEXING_EPOCH_PATH.exists() {
+        true => match fs::read_to_string(INDEXING_EPOCH_PATH.as_path()) {
+            Ok(epoch_file) => match epoch_file.parse::<i64>() {
+                Ok(e) => match OffsetDateTime::from_unix_timestamp(e) {
+                    Ok(dt) => Some(dt),
+                    Err(_) => None,
+                },
+                Err(_) => None,
+            },
+            Err(_) => None,
+        },
+        false => None,
+    }
+}
+
+fn tantivy_schema() -> Schema {
+    let mut schema_builder = Schema::builder();
+
+    // the filepath, we're setting up custom options so we can reliably search paths
+    let text_field_indexing = TextFieldIndexing::default()
+        // we do NOT want the field tokenized
+        .set_tokenizer("raw")
+        .set_index_option(IndexRecordOption::Basic);
+    let text_options = TextOptions::default()
+        .set_indexing_options(text_field_indexing)
+        .set_stored();
+    schema_builder.add_text_field(PATH, text_options);
+
+    // add the source, the module that discovered this file
+    schema_builder.add_text_field(SOURCE, TEXT | STORED);
+    // add the indexed at field
+    let date_opts = DateOptions::from(INDEXED)
+        .set_stored()
+        .set_fast()
+        .set_precision(tantivy::schema::DateTimePrecision::Seconds);
+    schema_builder.add_date_field(INDEXED_AT, date_opts);
+    // the title of the file
+    schema_builder.add_text_field(TITLE, TEXT | STORED);
+    // the main text of the file
+    schema_builder.add_text_field(BODY, TEXT | STORED);
+    let schema = schema_builder.build();
+    schema
+}
+
 impl FulltextIndex {
     fn send_status(&self, status: IndexStatus) {
         self.results_sender
             .send(IndexResults::Status(status))
             .expect("should be able to send status");
     }
+
     pub(crate) fn new(
         config: Conf,
         request_receiver: Receiver<IndexRequest>,
         results_sender: Sender<IndexResults>,
     ) -> Result<Self, TantivyError> {
         // setup the schema
-        let mut schema_builder = Schema::builder();
-        // the filepath, we're setting up custom options so we can reliably search paths
-        let text_field_indexing = TextFieldIndexing::default()
-            // we do NOT want the field tokenized
-            .set_tokenizer("raw")
-            .set_index_option(IndexRecordOption::Basic);
-        let text_options = TextOptions::default()
-            .set_indexing_options(text_field_indexing)
-            .set_stored();
-        schema_builder.add_text_field(PATH, text_options);
-
-        // add the source, the module that discovered this file
-        schema_builder.add_text_field(SOURCE, TEXT | STORED);
-        // add the indexed at field
-        let date_opts = DateOptions::from(INDEXED)
-            .set_stored()
-            .set_fast()
-            .set_precision(tantivy::schema::DateTimePrecision::Seconds);
-        schema_builder.add_date_field(INDEXED_AT, date_opts);
-        // the title of the file
-        schema_builder.add_text_field(TITLE, TEXT | STORED);
-        // the main text of the file
-        schema_builder.add_text_field(BODY, TEXT | STORED);
-        let schema = schema_builder.build();
+        let schema = tantivy_schema();
 
         // create the index
-        let index_path = PROJECT_DIRS.cache_dir().join("tantivy");
-        create_dir_all(&index_path)?;
+        create_dir_all(&*INDEX_PATH)?;
         info!(
             "tantivy index directory is: {}",
-            index_path.to_string_lossy()
+            INDEX_PATH.to_string_lossy()
         );
         let index_dir = ManagedDirectory::wrap(Box::new(
-            MmapDirectory::open(index_path)
+            MmapDirectory::open(INDEX_PATH.as_path())
                 .expect("should be able to create the tantivy mmap directory"),
         ))
         .expect("should be able to create the tantivy managed directory");
 
         // attempt to read the last indexing epoch
-        let last_indexing_epoch = match INDEXING_EPOCH_PATH.exists() {
-            true => match fs::read_to_string(INDEXING_EPOCH_PATH.as_path()) {
-                Ok(epoch_file) => match epoch_file.parse::<i64>() {
-                    Ok(e) => match OffsetDateTime::from_unix_timestamp(e) {
-                        Ok(dt) => Some(dt),
-                        Err(_) => None,
-                    },
-                    Err(_) => None,
-                },
-                Err(_) => None,
-            },
-            false => None,
-        };
+        let last_indexing_epoch = last_indexing_epoch();
 
         // if the indexing_epoch_file exists `open_or_create` the existing index, otherwise `create` a new one
         let index = if last_indexing_epoch.is_some() {

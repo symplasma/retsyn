@@ -5,7 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.7 (2025-11-12)
+
+### Bug Fixes
+
+ - <csr-id-245d9d3434dae17c572b7d9b28a09d48f666b317/> Selection was stuck on firt item
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Selection was stuck on firt item ([`245d9d3`](https://github.com/symplasma/retsyn/commit/245d9d3434dae17c572b7d9b28a09d48f666b317))
+</details>
+
 ## v0.1.6 (2025-11-12)
+
+<csr-id-3bf0cd7de6ff5d39760e240e24b134dbfe8e27ff/>
+<csr-id-5ba9a8ff4d6c0113d87775b0160d62c1ed36b026/>
+<csr-id-4f3e6ee03288165e6b67d5e0e9c6508e1689de35/>
+<csr-id-b5bdbe9f75d17aa2b70e1974100eaafdc8f2870f/>
 
 ### Chore
 
@@ -27,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 13 commits contributed to the release over the course of 11 calendar days.
+ - 14 commits contributed to the release over the course of 11 calendar days.
  - 11 days passed between releases.
  - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -39,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release retsyn v0.1.6 ([`85f3e45`](https://github.com/symplasma/retsyn/commit/85f3e45941fd64f07f8306cc23983933356390a5))
     - Update UI update logic ([`139d032`](https://github.com/symplasma/retsyn/commit/139d032438ea2a5548ac121d52295b323274e1a2))
     - Clean up the update method ([`4f3e6ee`](https://github.com/symplasma/retsyn/commit/4f3e6ee03288165e6b67d5e0e9c6508e1689de35))
     - Collect all results on retrieve_results ([`cea50bd`](https://github.com/symplasma/retsyn/commit/cea50bdf6d17092ab50106b91f1d39747b790a1b))

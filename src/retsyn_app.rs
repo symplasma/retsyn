@@ -225,21 +225,23 @@ impl RetsynApp {
             }
         }
 
-        if results_received > 0 {
-            self.selected_index = if self
-                .matched_items
-                .as_ref()
-                .is_ok_and(|(m, _errors)| m.is_empty())
-            {
-                None
-            } else {
-                Some(0)
-            };
+        self.selected_index = if self
+            .matched_items
+            .as_ref()
+            .is_ok_and(|(m, _errors)| m.is_empty())
+        {
+            None
+        } else {
+            Some(0)
+        };
 
+        if results_received > 0
+            || !matches!(self.index_status, IndexStatus::UpToDate)
+            || self.last_request_id > self.last_response_id
+        {
             // request screen repaint on changes
             self.egui_ctx.request_repaint();
-            // self.egui_context
-            //     .request_repaint_after(Duration::from_millis(INTERFRAME_MILLIS));
+            // self.egui_context.request_repaint_after(Duration::from_millis(INTERFRAME_MILLIS));
         }
     }
 
@@ -941,10 +943,10 @@ impl eframe::App for RetsynApp {
         self.handle_key_events(ctx);
         self.handle_navigation(ctx);
 
-        if let Some(last_time) = self.last_input_time {
-            if last_time.elapsed() >= self.debounce_duration
-                && self.search_text != self.last_search_text
-            {
+        if let Some(last_time) = self.last_input_time
+            && last_time.elapsed() >= self.debounce_duration
+        {
+            if self.search_text != self.last_search_text {
                 info!("Updating debounced search");
                 self.update_search();
                 self.last_input_time = None;

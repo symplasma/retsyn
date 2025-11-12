@@ -105,6 +105,6 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "Search App",
         options,
-        Box::new(|_cc| Ok(Box::new(RetsynApp::default()))),
+        Box::new(|cc| Ok(Box::new(RetsynApp::new(cc)))),
     )
 }

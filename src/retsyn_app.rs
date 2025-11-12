@@ -11,8 +11,8 @@ use std::{
 
 use confique::Config;
 use directories::ProjectDirs;
-use egui::{Align, Button, Color32, DragValue, Layout, ProgressBar, RichText};
-use tantivy::TantivyError;
+use eframe::CreationContext;
+use egui::{Align, Button, Color32, Context, DragValue, Layout, ProgressBar, RichText};
 use tracing::{error, info, warn};
 
 use crate::{
@@ -29,6 +29,7 @@ pub(crate) static PROJECT_DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
 });
 
 pub struct RetsynApp {
+    egui_context: Context,
     search_text: String,
     last_search_text: String,
     last_request_id: usize,
@@ -57,7 +58,7 @@ pub struct RetsynApp {
 }
 
 impl RetsynApp {
-    fn new() -> Result<Self, TantivyError> {
+    pub fn new(cc: &CreationContext) -> Self {
         let config_file = PROJECT_DIRS.config_dir().to_path_buf().join("retsyn.toml");
         let config_exists = Conf::config_exists();
 
@@ -109,7 +110,8 @@ impl RetsynApp {
             index.update_search_results();
         });
 
-        Ok(Self {
+        Self {
+            egui_context: cc.egui_ctx.clone(),
             search_text: String::new(),
             last_search_text: String::new(),
             last_request_id: 0,
@@ -139,7 +141,7 @@ impl RetsynApp {
             request_sender,
             results_receiver,
             last_repaint_request: Instant::now(),
-        })
+        }
     }
 
     /// Returns the currently selected item as a reference
@@ -212,7 +214,11 @@ impl RetsynApp {
                 None
             } else {
                 Some(0)
-            }
+            };
+
+            // request screen repaint on changes
+            self.egui_context
+                .request_repaint_after(Duration::from_millis(INTERFRAME_MILLIS));
         }
     }
 
@@ -229,6 +235,8 @@ impl RetsynApp {
                 self.fuzziness,
             );
         }
+
+        // NOTE: we request a repaint in `retrieve_results`
         self.retrieve_results();
         self.last_search_text = self.search_text.clone();
     }
@@ -906,15 +914,10 @@ impl RetsynApp {
     }
 }
 
-impl Default for RetsynApp {
-    fn default() -> Self {
-        Self::new().expect("should be able to make a new RetsynApp")
-    }
-}
-
 impl eframe::App for RetsynApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Set theme based on dark_mode toggle
+        // TODO do we need to set this every frame?
         if self.dark_mode {
             ctx.set_visuals(egui::Visuals::dark());
         } else {
@@ -937,8 +940,10 @@ impl eframe::App for RetsynApp {
                     "requesting repaint since we're not yet up to date. last_request_id: {} last_response_id: {}",
                     self.last_request_id, self.last_response_id
                 );
+
+                // NOTE: we request a repaint in `retrieve_results`
                 // ctx.request_repaint_after(Duration::from_millis(INTERFRAME_MILLIS));
-                ctx.request_repaint();
+                // ctx.request_repaint();
 
                 self.retrieve_results();
             }

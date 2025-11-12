@@ -23,6 +23,7 @@ use crate::{
 };
 
 const INTERFRAME_MILLIS: u64 = 16;
+const DEBOUNCE_DURATION: Duration = Duration::from_millis(150);
 
 pub(crate) static PROJECT_DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
     ProjectDirs::from("org", "symplasma", "retsyn").expect("should be able to create project dir")
@@ -131,7 +132,7 @@ impl RetsynApp {
             matched_items: Ok((vec![], vec![])),
             selected_index: None,
             last_input_time: None,
-            debounce_duration: Duration::from_millis(100),
+            debounce_duration: DEBOUNCE_DURATION,
             recent_queries: vec![
                 "Recent query 1".to_string(),
                 "Recent query 2".to_string(),
@@ -234,12 +235,12 @@ impl RetsynApp {
             } else {
                 Some(0)
             };
-        }
 
-        // request screen repaint on changes
-        self.egui_ctx.request_repaint();
-        // self.egui_context
-        //     .request_repaint_after(Duration::from_millis(INTERFRAME_MILLIS));
+            // request screen repaint on changes
+            self.egui_ctx.request_repaint();
+            // self.egui_context
+            //     .request_repaint_after(Duration::from_millis(INTERFRAME_MILLIS));
+        }
     }
 
     fn update_search(&mut self) {
@@ -936,41 +937,26 @@ impl RetsynApp {
 
 impl eframe::App for RetsynApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // handling key events here to stay responsive
         self.handle_key_events(ctx);
         self.handle_navigation(ctx);
-
-        // TODO fix the bug where this causes excessive repaints during indexing
-        if !matches!(self.index_status, IndexStatus::UpToDate)
-            || self.last_request_id > self.last_response_id
-        {
-            if self.last_repaint_request.elapsed().as_millis() > INTERFRAME_MILLIS.into() {
-                // reset the repaint request timer
-                self.last_repaint_request = Instant::now();
-
-                info!(
-                    "requesting repaint since we're not yet up to date. last_request_id: {} last_response_id: {}",
-                    self.last_request_id, self.last_response_id
-                );
-
-                // NOTE: we request a repaint in `retrieve_results`
-                // ctx.request_repaint_after(Duration::from_millis(INTERFRAME_MILLIS));
-                // ctx.request_repaint();
-
-                self.retrieve_results();
-            }
-        }
 
         if let Some(last_time) = self.last_input_time {
             if last_time.elapsed() >= self.debounce_duration
                 && self.search_text != self.last_search_text
             {
+                info!("Updating debounced search");
                 self.update_search();
                 self.last_input_time = None;
             } else {
+                // if we remove this repaint request, things feel a lot less responsive
                 ctx.request_repaint();
             }
+        } else {
+            self.retrieve_results();
         }
 
+        // drawing the main UI after updating
         self.draw_main_ui(ctx);
     }
 }

@@ -29,7 +29,7 @@ pub(crate) static PROJECT_DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
 });
 
 pub struct RetsynApp {
-    egui_context: Context,
+    egui_ctx: Context,
     search_text: String,
     last_search_text: String,
     last_request_id: usize,
@@ -59,6 +59,8 @@ pub struct RetsynApp {
 
 impl RetsynApp {
     pub fn new(cc: &CreationContext) -> Self {
+        let egui_ctx = cc.egui_ctx.clone();
+
         let config_file = PROJECT_DIRS.config_dir().to_path_buf().join("retsyn.toml");
         let config_exists = Conf::config_exists();
 
@@ -110,8 +112,17 @@ impl RetsynApp {
             index.update_search_results();
         });
 
+        // TODO pull this from config
+        let dark_mode = false;
+        // Set theme based on dark_mode toggle
+        egui_ctx.set_visuals(if dark_mode {
+            egui::Visuals::dark()
+        } else {
+            egui::Visuals::light()
+        });
+
         Self {
-            egui_context: cc.egui_ctx.clone(),
+            egui_ctx,
             search_text: String::new(),
             last_search_text: String::new(),
             last_request_id: 0,
@@ -127,7 +138,7 @@ impl RetsynApp {
                 "Recent query 3".to_string(),
             ],
             scroll_to_selected: false,
-            dark_mode: false,
+            dark_mode,
             show_snippets: true,
             show_preview: true,
             show_help: false,
@@ -192,7 +203,12 @@ impl RetsynApp {
     }
 
     fn retrieve_results(&mut self) {
-        if let Ok(index_results) = self.results_receiver.try_recv() {
+        let mut results_received: usize = 0;
+
+        // we're looping here to soak up all pending results
+        // if this becomes a performance issue we can bail early
+        for index_results in self.results_receiver.try_iter() {
+            results_received += 1;
             match index_results {
                 IndexResults::Error(_) => todo!(),
                 IndexResults::Status(index_status) => self.index_status = index_status,
@@ -206,6 +222,9 @@ impl RetsynApp {
                     self.matched_items = results
                 }
             }
+        }
+
+        if results_received > 0 {
             self.selected_index = if self
                 .matched_items
                 .as_ref()
@@ -215,11 +234,12 @@ impl RetsynApp {
             } else {
                 Some(0)
             };
-
-            // request screen repaint on changes
-            self.egui_context
-                .request_repaint_after(Duration::from_millis(INTERFRAME_MILLIS));
         }
+
+        // request screen repaint on changes
+        self.egui_ctx.request_repaint();
+        // self.egui_context
+        //     .request_repaint_after(Duration::from_millis(INTERFRAME_MILLIS));
     }
 
     fn update_search(&mut self) {
@@ -916,16 +936,7 @@ impl RetsynApp {
 
 impl eframe::App for RetsynApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Set theme based on dark_mode toggle
-        // TODO do we need to set this every frame?
-        if self.dark_mode {
-            ctx.set_visuals(egui::Visuals::dark());
-        } else {
-            ctx.set_visuals(egui::Visuals::light());
-        }
-
         self.handle_key_events(ctx);
-
         self.handle_navigation(ctx);
 
         // TODO fix the bug where this causes excessive repaints during indexing

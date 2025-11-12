@@ -5,7 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.6 (2025-11-12)
+
+### Chore
+
+ - <csr-id-3bf0cd7de6ff5d39760e240e24b134dbfe8e27ff/> Update features and todos
+ - <csr-id-5ba9a8ff4d6c0113d87775b0160d62c1ed36b026/> Upgrade dependencies
+
+### New Features
+
+ - <csr-id-e263804b63faa8c10443ad2f5a4aefb6dfbca26c/> Add indexing status progress bar
+ - <csr-id-0bb06a37da8e7ce2687a5018a613c0a82b8e9747/> Enable word stemming for search
+ - <csr-id-4a8518f67427471fe4179ac67df4f231d64c3ecf/> Show the preview by default
+
+### Refactor
+
+ - <csr-id-4f3e6ee03288165e6b67d5e0e9c6508e1689de35/> Clean up the update method
+ - <csr-id-b5bdbe9f75d17aa2b70e1974100eaafdc8f2870f/> Clean up SearchIndex constructor
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 13 commits contributed to the release over the course of 11 calendar days.
+ - 11 days passed between releases.
+ - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Update UI update logic ([`139d032`](https://github.com/symplasma/retsyn/commit/139d032438ea2a5548ac121d52295b323274e1a2))
+    - Clean up the update method ([`4f3e6ee`](https://github.com/symplasma/retsyn/commit/4f3e6ee03288165e6b67d5e0e9c6508e1689de35))
+    - Collect all results on retrieve_results ([`cea50bd`](https://github.com/symplasma/retsyn/commit/cea50bdf6d17092ab50106b91f1d39747b790a1b))
+    - Save egui context to allow update requests ([`b827d57`](https://github.com/symplasma/retsyn/commit/b827d57924d3a4a5967de309bf465b9839a8cd67))
+    - Add indexing status progress bar ([`e263804`](https://github.com/symplasma/retsyn/commit/e263804b63faa8c10443ad2f5a4aefb6dfbca26c))
+    - Add file indexing counters ([`6606009`](https://github.com/symplasma/retsyn/commit/66060091aba0d78029f2ecc22262912a2decb81e))
+    - Enable word stemming for search ([`0bb06a3`](https://github.com/symplasma/retsyn/commit/0bb06a37da8e7ce2687a5018a613c0a82b8e9747))
+    - Clean up SearchIndex constructor ([`b5bdbe9`](https://github.com/symplasma/retsyn/commit/b5bdbe9f75d17aa2b70e1974100eaafdc8f2870f))
+    - Show the preview by default ([`4a8518f`](https://github.com/symplasma/retsyn/commit/4a8518f67427471fe4179ac67df4f231d64c3ecf))
+    - Update features and todos ([`3bf0cd7`](https://github.com/symplasma/retsyn/commit/3bf0cd7de6ff5d39760e240e24b134dbfe8e27ff))
+    - Add request ids and other optimizations ([`28af738`](https://github.com/symplasma/retsyn/commit/28af738f92cb71d582d592d984c88549125f3ddd))
+    - Initial attempt at background updates ([`0958c4a`](https://github.com/symplasma/retsyn/commit/0958c4a27bde2982d5d00303778475ef88abc27a))
+    - Upgrade dependencies ([`5ba9a8f`](https://github.com/symplasma/retsyn/commit/5ba9a8ff4d6c0113d87775b0160d62c1ed36b026))
+</details>
+
 ## v0.1.5 (2025-10-31)
+
+<csr-id-bb98f4425945fb432c5db8c467a2cdb17fa6ea59/>
 
 ### Chore
 
@@ -24,7 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 11 commits contributed to the release over the course of 6 calendar days.
+ - 12 commits contributed to the release over the course of 6 calendar days.
  - 8 days passed between releases.
  - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -36,6 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release retsyn v0.1.5 ([`f583868`](https://github.com/symplasma/retsyn/commit/f583868721ba83edbe043ca2cc93ebdb0709ed9e))
     - Add rust crates to design docs ([`36a1a30`](https://github.com/symplasma/retsyn/commit/36a1a30faf5863db82220f09bfcd02ec30892aa7))
     - Enable clippy print lints and switch to tracing ([`bb98f44`](https://github.com/symplasma/retsyn/commit/bb98f4425945fb432c5db8c467a2cdb17fa6ea59))
     - Implement Display trait for IndexPath enum ([`c0f9f3a`](https://github.com/symplasma/retsyn/commit/c0f9f3a2d1664bccd001aa37a11af591f299a1d8))

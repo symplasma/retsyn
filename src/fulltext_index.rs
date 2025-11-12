@@ -60,8 +60,12 @@ pub(crate) enum IndexStatus {
     Initializing,
     CollectingPaths,
     FilteringPaths,
-    UpdatingIndex,
-    CommittingChanges,
+    UpdatingIndex {
+        indexed: usize,
+        total: usize,
+        committing_updates: bool,
+        file_path: String,
+    },
     UpToDate,
 }
 
@@ -355,17 +359,27 @@ impl FulltextIndex {
         let indexing_epoch_file = AtomicFile::new(&*INDEXING_EPOCH_PATH, AllowOverwrite);
         let indexing_epoch = OffsetDateTime::now_utc().unix_timestamp();
 
-        self.send_status(IndexStatus::UpdatingIndex);
+        self.send_status(IndexStatus::UpdatingIndex {
+            indexed: self.files_indexed,
+            total: self.out_of_date_files,
+            committing_updates: false,
+            file_path: "".to_owned(),
+        });
 
         // loop through all of the IndexEntries on the receiver and add them to the index
         info!("starting entry indexing loop...");
-        let indexing_start = Instant::now();
+        let mut indexing_timer = Instant::now();
         loop {
             // TODO consider switching to crossbeam's select macro
             // TODO count the entries received or the time taken so we can commit in batches
 
-            if indexing_start.elapsed().as_secs() > 2 {
-                self.send_status(IndexStatus::CommittingChanges);
+            if indexing_timer.elapsed().as_secs() > 6 {
+                self.send_status(IndexStatus::UpdatingIndex {
+                    indexed: self.files_indexed,
+                    total: self.out_of_date_files,
+                    committing_updates: true,
+                    file_path: "".to_owned(),
+                });
 
                 // commit the changes so that searchers can see the changes
                 info!("committing changes to fulltext index...");
@@ -373,11 +387,13 @@ impl FulltextIndex {
                     .commit()
                     .expect("should be able to commit index updates");
 
-                self.send_status(IndexStatus::UpdatingIndex);
+                // reset the commit interval timer
+                indexing_timer = Instant::now();
             }
 
             // check for new entries in need of indexing
             match entry_receiver.try_recv() {
+                // status updates are sent from within update_entry
                 Ok(entry) => self.update_entry(&entry),
                 Err(e) => match e {
                     std::sync::mpsc::TryRecvError::Empty => {
@@ -394,7 +410,12 @@ impl FulltextIndex {
             }
         }
 
-        self.send_status(IndexStatus::CommittingChanges);
+        self.send_status(IndexStatus::UpdatingIndex {
+            indexed: self.files_indexed,
+            total: self.out_of_date_files,
+            committing_updates: true,
+            file_path: "".to_owned(),
+        });
 
         // commit the changes so that searchers can see the changes
         info!("committing changes to fulltext index...");
@@ -424,6 +445,13 @@ impl FulltextIndex {
     }
 
     fn update_entry(&mut self, entry: &IndexEntry) {
+        self.send_status(IndexStatus::UpdatingIndex {
+            indexed: self.files_indexed,
+            total: self.out_of_date_files,
+            committing_updates: false,
+            file_path: entry.path().to_owned(),
+        });
+
         // we were using the `doc!()` macro, but it doesn't seem to play well with date fields
         let mut tantivy_doc = TantivyDocument::default();
         tantivy_doc.add_text(self.source_field, entry.source());

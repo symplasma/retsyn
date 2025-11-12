@@ -11,7 +11,7 @@ use std::{
 
 use confique::Config;
 use directories::ProjectDirs;
-use egui::{Align, Button, Color32, DragValue, Layout, RichText};
+use egui::{Align, Button, Color32, DragValue, Layout, ProgressBar, RichText};
 use tantivy::TantivyError;
 use tracing::{error, info, warn};
 
@@ -21,6 +21,8 @@ use crate::{
     messages::{index_request::IndexRequest, index_results::IndexResults},
     search_result::SearchResult,
 };
+
+const INTERFRAME_MILLIS: u64 = 16;
 
 pub(crate) static PROJECT_DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
     ProjectDirs::from("org", "symplasma", "retsyn").expect("should be able to create project dir")
@@ -51,6 +53,7 @@ pub struct RetsynApp {
     fuzziness: u8,
     request_sender: Sender<IndexRequest>,
     results_receiver: Receiver<IndexResults>,
+    last_repaint_request: Instant,
 }
 
 impl RetsynApp {
@@ -135,6 +138,7 @@ impl RetsynApp {
             fuzziness: 0,
             request_sender,
             results_receiver,
+            last_repaint_request: Instant::now(),
         })
     }
 
@@ -681,7 +685,39 @@ impl RetsynApp {
 
                 // draw index status
                 ui.add_space(10.0);
-                ui.colored_label(Color32::BLUE, format!("{:?}", self.index_status));
+
+                match &self.index_status {
+                    IndexStatus::Initializing
+                    | IndexStatus::CollectingPaths
+                    | IndexStatus::FilteringPaths => {
+                        ui.label("Preparing to index...");
+                    }
+                    IndexStatus::UpdatingIndex {
+                        indexed,
+                        total,
+                        committing_updates,
+                        file_path,
+                    } => {
+                        let progress = (*indexed as f32) / (*total as f32);
+                        ui.horizontal(|ui| {
+                            ui.add(
+                                ProgressBar::new(progress)
+                                    .desired_width(ui.available_width() - 100.0),
+                            );
+                            ui.add_space(5.0);
+                            ui.label(format!("{}/{}", indexed, total));
+                        });
+                        ui.add_space(5.0);
+                        if *committing_updates {
+                            ui.colored_label(Color32::BLUE, "Committing updates...");
+                        } else {
+                            ui.label(file_path);
+                        }
+                    }
+                    IndexStatus::UpToDate => {
+                        ui.label("Done indexing");
+                    }
+                };
 
                 // draw query errors
                 ui.add_space(10.0);
@@ -889,15 +925,23 @@ impl eframe::App for RetsynApp {
 
         self.handle_navigation(ctx);
 
+        // TODO fix the bug where this causes excessive repaints during indexing
         if !matches!(self.index_status, IndexStatus::UpToDate)
             || self.last_request_id > self.last_response_id
         {
-            info!(
-                "requesting repaint since we're not yet up to date. last_request_id: {} last_response_id: {}",
-                self.last_request_id, self.last_response_id
-            );
-            ctx.request_repaint_after(Duration::from_millis(16));
-            self.retrieve_results();
+            if self.last_repaint_request.elapsed().as_millis() > INTERFRAME_MILLIS.into() {
+                // reset the repaint request timer
+                self.last_repaint_request = Instant::now();
+
+                info!(
+                    "requesting repaint since we're not yet up to date. last_request_id: {} last_response_id: {}",
+                    self.last_request_id, self.last_response_id
+                );
+                // ctx.request_repaint_after(Duration::from_millis(INTERFRAME_MILLIS));
+                ctx.request_repaint();
+
+                self.retrieve_results();
+            }
         }
 
         if let Some(last_time) = self.last_input_time {

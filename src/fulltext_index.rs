@@ -79,6 +79,9 @@ pub struct FulltextIndex {
     pub(crate) path_field: TantivyField,
     pub(crate) title_field: TantivyField,
     pub(crate) body_field: TantivyField,
+    total_files: usize,
+    out_of_date_files: usize,
+    files_indexed: usize,
 }
 
 pub(crate) type SearchResultsAndErrors =
@@ -216,6 +219,9 @@ impl FulltextIndex {
             path_field,
             title_field,
             body_field,
+            total_files: 0,
+            out_of_date_files: 0,
+            files_indexed: 0,
         })
     }
 
@@ -257,6 +263,8 @@ impl FulltextIndex {
     ) {
         self.send_status(IndexStatus::FilteringPaths);
         for index_path in path_receiver {
+            self.total_files += 1;
+
             // the file path on disk
             // TODO we'll need to modify this or add a volume identifier if we index from more than one host
             let path = index_path.path();
@@ -282,6 +290,7 @@ impl FulltextIndex {
                 continue;
             };
 
+            self.out_of_date_files += 1;
             path_converter_sender
                 .send(index_path)
                 .expect("should be able to send path to converter");
@@ -414,7 +423,7 @@ impl FulltextIndex {
         }
     }
 
-    fn update_entry(&self, entry: &IndexEntry) {
+    fn update_entry(&mut self, entry: &IndexEntry) {
         // we were using the `doc!()` macro, but it doesn't seem to play well with date fields
         let mut tantivy_doc = TantivyDocument::default();
         tantivy_doc.add_text(self.source_field, entry.source());
@@ -425,7 +434,10 @@ impl FulltextIndex {
 
         // add the document to the index
         match self.writer.add_document(tantivy_doc) {
-            Ok(_) => info!("adding document to index: {}", &entry.path()),
+            Ok(_) => {
+                info!("added document to index: {}", &entry.path());
+                self.files_indexed += 1;
+            }
             // TODO switch to the tracing crate
             Err(e) => {
                 warn!("could not index document: {}: {}", &entry.path(), e)

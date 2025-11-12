@@ -225,15 +225,14 @@ impl RetsynApp {
             }
         }
 
-        self.selected_index = if self
-            .matched_items
-            .as_ref()
-            .is_ok_and(|(m, _errors)| m.is_empty())
-        {
-            None
-        } else {
-            Some(0)
-        };
+        // TODO determine if this is the selection preservation behavior that we want
+        self.selected_index = Some(
+            self.matched_items
+                .as_ref()
+                .and_then(|(m, _errors)| Ok(self.selected_index.min(Some(m.len()))))
+                .unwrap_or_default()
+                .unwrap_or_default(),
+        );
 
         if results_received > 0
             || !matches!(self.index_status, IndexStatus::UpToDate)

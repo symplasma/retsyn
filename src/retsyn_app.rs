@@ -12,8 +12,10 @@ use std::{
 use confique::Config;
 use directories::ProjectDirs;
 use eframe::CreationContext;
-use egui::{Align, Button, Color32, Context, DragValue, Layout, ProgressBar, RichText};
-use tracing::{error, info, warn};
+use egui::{
+    Align, Button, Color32, Context, DragValue, Layout, OutputCommand, ProgressBar, RichText,
+};
+use tracing::{debug, error, info, warn};
 
 use crate::{
     config::Conf,
@@ -798,7 +800,27 @@ impl RetsynApp {
                                 .id_salt("preview")
                                 .auto_shrink([false, false])
                                 .show(&mut columns[1], |ui| match self.selected_item() {
-                                    Some(selected_item) => selected_item.draw_preview_area(ui),
+                                    Some(selected_item) => {
+                                        selected_item.draw_preview_area(ui);
+                                        ui.ctx().output(|o| {
+                                            for command in &o.commands {
+                                                match command {
+                                                    OutputCommand::OpenUrl(open_url) => {
+                                                        debug!(
+                                                            "clicked url: {} in {} {}",
+                                                            open_url.url,
+                                                            selected_item.title,
+                                                            selected_item.path
+                                                        )
+                                                    }
+                                                    // right now we only care about link clicks
+                                                    _ => (),
+                                                    // OutputCommand::CopyText(_) => todo!(),
+                                                    // OutputCommand::CopyImage(color_image) => todo!(),
+                                                }
+                                            }
+                                        });
+                                    }
                                     None => {
                                         ui.heading("preview");
                                     }

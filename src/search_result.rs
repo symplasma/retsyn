@@ -16,8 +16,8 @@ use crate::fulltext_index::FulltextIndex;
 pub(crate) struct SearchResult {
     source: String,
     indexed_at: DateTime,
-    path: String,
-    title: String,
+    pub(crate) path: String,
+    pub(crate) title: String,
     body: Field,
     snippet: Snippet,
     tantivy_doc: TantivyDocument,

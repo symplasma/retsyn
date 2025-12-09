@@ -1,4 +1,5 @@
 use clap::Parser as _;
+use color_eyre::eyre::{self, Result};
 use directories::ProjectDirs;
 use eframe::egui;
 use retsyn::cli::Cli;
@@ -11,6 +12,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 fn setup_tracing() -> Result<(), Box<dyn std::error::Error>> {
     // Get XDG cache directory for log files
+    // TODO replace with PROJECT_DIRS
     let project_dir = ProjectDirs::from("org", "symplasma", "retsyn")
         .ok_or("Could not determine project directory")?;
     let log_dir = project_dir.data_dir();
@@ -42,7 +44,9 @@ fn setup_tracing() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn main() -> eframe::Result {
+fn main() -> Result<()> {
+    color_eyre::install()?;
+
     let cli = Cli::parse();
 
     // Initialize tracing. We're doing this after reading args from the CLI so we can set the log file path if requested
@@ -107,4 +111,7 @@ fn main() -> eframe::Result {
         options,
         Box::new(|cc| Ok(Box::new(RetsynApp::new(cc)))),
     )
+    .map_err(|e| eyre::eyre!("{:?}", e))?;
+
+    Ok(())
 }

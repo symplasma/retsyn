@@ -25,3 +25,12 @@ impl InvocationList {
         self.invocations.append(&mut invocations.invocations);
     }
 }
+
+impl<'a> IntoIterator for &'a InvocationList {
+    type Item = &'a Invocation;
+    type IntoIter = std::slice::Iter<'a, Invocation>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.invocations.iter()
+    }
+}

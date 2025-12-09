@@ -20,6 +20,7 @@ use tracing::{debug, error, info, warn};
 use crate::{
     config::Conf,
     fulltext_index::{FulltextIndex, IndexStatus, SearchResultsAndErrors},
+    invocations::invocation_list::InvocationList,
     messages::{index_request::IndexRequest, index_results::IndexResults},
     search_result::SearchResult,
 };
@@ -43,6 +44,7 @@ pub struct RetsynApp {
     last_input_time: Option<Instant>,
     debounce_duration: Duration,
     recent_queries: Vec<String>,
+    invocations: InvocationList,
     scroll_to_selected: bool,
     dark_mode: bool,
     show_snippets: bool,
@@ -140,6 +142,7 @@ impl RetsynApp {
                 "Recent query 2".to_string(),
                 "Recent query 3".to_string(),
             ],
+            invocations: Default::default(),
             scroll_to_selected: false,
             dark_mode,
             show_snippets: true,
@@ -796,6 +799,8 @@ impl RetsynApp {
                             });
 
                         if self.show_preview {
+                            let mut invocations: InvocationList = Default::default();
+
                             egui::ScrollArea::vertical()
                                 .id_salt("preview")
                                 .auto_shrink([false, false])
@@ -806,6 +811,11 @@ impl RetsynApp {
                                             for command in &o.commands {
                                                 match command {
                                                     OutputCommand::OpenUrl(open_url) => {
+                                                        invocations.add_invocation(
+                                                            &selected_item.path,
+                                                            &selected_item.title,
+                                                            &open_url.url,
+                                                        );
                                                         debug!(
                                                             "clicked url: {} in {} {}",
                                                             open_url.url,
@@ -825,6 +835,9 @@ impl RetsynApp {
                                         ui.heading("preview");
                                     }
                                 });
+
+                            // add invocations to our invocation list
+                            self.invocations.append(&mut invocations);
                         }
                     })
                 });

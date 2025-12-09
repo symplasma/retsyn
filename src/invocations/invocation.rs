@@ -44,7 +44,7 @@ impl Invocation {
         }
     }
 
-    fn cache_file(date: OffsetDateTime) -> PathBuf {
+    pub(crate) fn cache_file(date: OffsetDateTime) -> PathBuf {
         // Format date as YYYY-MM-DD
         let format = format_description::parse("[year]-[month]-[day]")
             .expect("cache file timestamp format to be vaild");
@@ -60,7 +60,7 @@ impl Invocation {
         // TODO need to only return valid files
     }
 
-    fn append_invocations_to_csv(invocations: &InvocationList, file_path: &Path) -> Result<()> {
+    pub(crate) fn append_invocations_to_csv(invocations: &InvocationList, file_path: &Path) -> Result<()> {
         // Check if the file already exists so we don't write headers more than once
         let write_headers = !file_path.exists();
 

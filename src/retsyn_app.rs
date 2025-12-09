@@ -20,7 +20,7 @@ use tracing::{debug, error, info, warn};
 use crate::{
     config::Conf,
     fulltext_index::{FulltextIndex, IndexStatus, SearchResultsAndErrors},
-    invocations::invocation_list::InvocationList,
+    invocations::{invocation::Invocation, invocation_list::InvocationList},
     messages::{index_request::IndexRequest, index_results::IndexResults},
     search_result::SearchResult,
 };
@@ -968,6 +968,28 @@ impl RetsynApp {
         {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
+    }
+
+    /// Save invocations to CSV file
+    fn save_invocations(&self) {
+        let now = time::OffsetDateTime::now_utc();
+        let cache_file = Invocation::cache_file(now);
+        
+        match Invocation::append_invocations_to_csv(&self.invocations, &cache_file) {
+            Ok(()) => {
+                info!("Successfully saved invocations to {}", cache_file.display());
+            }
+            Err(e) => {
+                warn!("Failed to save invocations to {}: {}", cache_file.display(), e);
+            }
+        }
+    }
+}
+
+impl Drop for RetsynApp {
+    fn drop(&mut self) {
+        info!("RetsynApp is being dropped, saving invocations...");
+        self.save_invocations();
     }
 }
 

@@ -20,7 +20,10 @@ use tracing::{debug, error, info, warn};
 use crate::{
     config::Conf,
     fulltext_index::{FulltextIndex, IndexStatus, SearchResultsAndErrors},
-    invocations::{invocation::Invocation, invocation_list::InvocationList},
+    invocations::{
+        invocation::{Action, Invocation},
+        invocation_list::InvocationList,
+    },
     messages::{index_request::IndexRequest, index_results::IndexResults},
     search_result::SearchResult,
 };
@@ -275,9 +278,14 @@ impl RetsynApp {
                 if reveal {
                     item.reveal();
                     // TODO add action to invocations
-                    self.invocations.add_invocation_by_item(item);
+                    self.invocations.add_invocation_by_item(
+                        Action::Reveal,
+                        &self.search_text,
+                        item,
+                    );
                 } else {
-                    self.invocations.add_invocation_by_item(item);
+                    self.invocations
+                        .add_invocation_by_item(Action::Open, &self.search_text, item);
                     item.open();
                 }
 
@@ -815,6 +823,8 @@ impl RetsynApp {
                                                 match command {
                                                     OutputCommand::OpenUrl(open_url) => {
                                                         invocations.add_invocation(
+                                                            Action::OpenLink,
+                                                            &self.search_text,
                                                             &selected_item.path,
                                                             &selected_item.title,
                                                             &open_url.url,

@@ -1,4 +1,7 @@
-use crate::{invocations::invocation::Invocation, search_result::SearchResult};
+use crate::{
+    invocations::invocation::{Action, Invocation},
+    search_result::SearchResult,
+};
 
 pub(crate) struct InvocationList {
     invocations: Vec<Invocation>,
@@ -13,8 +16,17 @@ impl Default for InvocationList {
 }
 
 impl InvocationList {
-    pub(crate) fn add_invocation(&mut self, path: &str, title: &str, url: &str) {
+    pub(crate) fn add_invocation(
+        &mut self,
+        action: Action,
+        query: &str,
+        path: &str,
+        title: &str,
+        url: &str,
+    ) {
         self.invocations.push(Invocation::new(
+            action,
+            query.to_owned(),
             path.to_owned(),
             title.to_owned(),
             url.to_owned(),
@@ -25,8 +37,14 @@ impl InvocationList {
         self.invocations.append(&mut invocations.invocations);
     }
 
-    pub(crate) fn add_invocation_by_item(&mut self, item: &SearchResult) {
-        self.add_invocation(&item.path, &item.title, "");
+    pub(crate) fn add_invocation_by_item(
+        &mut self,
+        action: Action,
+        query: &str,
+        item: &SearchResult,
+    ) {
+        // url is empty here since this is usually called when we invoke an action on a whole item rather than by clicking on a link
+        self.add_invocation(action, query, &item.path, &item.title, "");
     }
 }
 

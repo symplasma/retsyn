@@ -17,8 +17,17 @@ const INVOCATION_FILE_PREFIX: &str = "retsyn-invocations-";
 const INVOCATION_FILE_SUFFIX: &str = ".csv";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) enum Action {
+    Open,
+    OpenLink,
+    Reveal,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct Invocation {
     pub(crate) timestamp: u64,
+    pub(crate) action: Action,
+    pub(crate) query: String,
     // TODO should we add the search query?
     pub(crate) path: String,
     pub(crate) title: String,
@@ -26,7 +35,13 @@ pub(crate) struct Invocation {
 }
 
 impl Invocation {
-    pub(crate) fn new(path: String, title: String, url: String) -> Self {
+    pub(crate) fn new(
+        action: Action,
+        query: String,
+        path: String,
+        title: String,
+        url: String,
+    ) -> Self {
         // Get the current system time.
         let now = SystemTime::now();
 
@@ -38,6 +53,8 @@ impl Invocation {
 
         Self {
             timestamp,
+            action,
+            query,
             path,
             title,
             url,
@@ -60,7 +77,10 @@ impl Invocation {
         // TODO need to only return valid files
     }
 
-    pub(crate) fn append_invocations_to_csv(invocations: &InvocationList, file_path: &Path) -> Result<()> {
+    pub(crate) fn append_invocations_to_csv(
+        invocations: &InvocationList,
+        file_path: &Path,
+    ) -> Result<()> {
         // Check if the file already exists so we don't write headers more than once
         let write_headers = !file_path.exists();
 

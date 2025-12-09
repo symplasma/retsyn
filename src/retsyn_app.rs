@@ -274,7 +274,10 @@ impl RetsynApp {
                 let item = &matched_items[index];
                 if reveal {
                     item.reveal();
+                    // TODO add action to invocations
+                    self.invocations.add_invocation_by_item(item);
                 } else {
+                    self.invocations.add_invocation_by_item(item);
                     item.open();
                 }
 
@@ -974,13 +977,17 @@ impl RetsynApp {
     fn save_invocations(&self) {
         let now = time::OffsetDateTime::now_utc();
         let cache_file = Invocation::cache_file(now);
-        
+
         match Invocation::append_invocations_to_csv(&self.invocations, &cache_file) {
             Ok(()) => {
                 info!("Successfully saved invocations to {}", cache_file.display());
             }
             Err(e) => {
-                warn!("Failed to save invocations to {}: {}", cache_file.display(), e);
+                warn!(
+                    "Failed to save invocations to {}: {}",
+                    cache_file.display(),
+                    e
+                );
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::invocations::invocation::Invocation;
+use crate::{invocations::invocation::Invocation, search_result::SearchResult};
 
 pub(crate) struct InvocationList {
     invocations: Vec<Invocation>,
@@ -23,6 +23,10 @@ impl InvocationList {
 
     pub(crate) fn append(&mut self, invocations: &mut InvocationList) {
         self.invocations.append(&mut invocations.invocations);
+    }
+
+    pub(crate) fn add_invocation_by_item(&mut self, item: &SearchResult) {
+        self.add_invocation(&item.path, &item.title, "");
     }
 }
 

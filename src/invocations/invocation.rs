@@ -11,8 +11,14 @@ use time::{OffsetDateTime, format_description};
 use crate::invocations::invocation_list::InvocationList;
 use crate::retsyn_app::PROJECT_DIRS;
 
+/// The minimum number of invocations to load for frecency calculations
+pub(crate) const MIN_INVOCATION_NUM: usize = 1000;
+/// The number of days/files that will be retained for invocation logs
+pub(crate) const MAX_INVOCATION_RETENTION: usize = 60;
+// TODO need to implement invocation log cleaning
+
 /// The prefix to use for invocation log files
-const INVOCATION_FILE_PREFIX: &str = "retsyn-invocations-";
+pub(crate) const INVOCATION_FILE_PREFIX: &str = "retsyn-invocations-";
 /// The suffix to use for invocation log files
 const INVOCATION_FILE_SUFFIX: &str = ".csv";
 

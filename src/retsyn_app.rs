@@ -46,7 +46,7 @@ pub struct RetsynApp {
     selected_index: Option<usize>,
     last_input_time: Option<Instant>,
     debounce_duration: Duration,
-    recent_queries: Vec<String>,
+    recent_queries: InvocationList,
     invocations: InvocationList,
     scroll_to_selected: bool,
     dark_mode: bool,
@@ -140,11 +140,7 @@ impl RetsynApp {
             selected_index: None,
             last_input_time: None,
             debounce_duration: DEBOUNCE_DURATION,
-            recent_queries: vec![
-                "Recent query 1".to_string(),
-                "Recent query 2".to_string(),
-                "Recent query 3".to_string(),
-            ],
+            recent_queries: InvocationList::load_from_cache().unwrap_or_default(),
             invocations: Default::default(),
             scroll_to_selected: false,
             dark_mode,
@@ -287,14 +283,6 @@ impl RetsynApp {
                     self.invocations
                         .add_invocation_by_item(Action::Open, &self.search_text, item);
                     item.open();
-                }
-
-                if !self.search_text.is_empty() && !self.recent_queries.contains(&self.search_text)
-                {
-                    self.recent_queries.insert(0, self.search_text.clone());
-                    if self.recent_queries.len() > 10 {
-                        self.recent_queries.truncate(10);
-                    }
                 }
             }
         }
@@ -907,12 +895,12 @@ impl RetsynApp {
         ui.heading("Recent Queries");
         ui.add_space(5.0);
 
-        for (idx, query) in self.recent_queries.iter().enumerate() {
+        for (idx, invocation) in self.recent_queries.iter().enumerate() {
             let is_selected = self.selected_index == Some(idx);
-            let response = ui.selectable_label(is_selected, query);
+            let response = ui.selectable_label(is_selected, invocation.title.clone());
 
             if response.clicked() {
-                self.search_text = query.clone();
+                self.search_text = invocation.query.clone();
                 self.last_input_time = Some(Instant::now());
             }
         }

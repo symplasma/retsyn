@@ -19,13 +19,13 @@ use tracing::{debug, error, info, warn};
 
 use crate::{
     config::Conf,
-    fulltext_index::{FulltextIndex, IndexStatus, SearchResultsAndErrors},
     invocations::{
         invocation::{Action, Invocation},
         invocation_list::InvocationList,
     },
     messages::{index_request::IndexRequest, index_results::IndexResults},
-    search_result::SearchResult,
+    model::fulltext_index::{FulltextIndex, IndexStatus, SearchResultsAndErrors},
+    model::search_result::SearchResult,
 };
 
 const INTERFRAME_MILLIS: u64 = 16;

@@ -2,7 +2,7 @@ use crate::{
     invocations::invocation::{
         Action, INVOCATION_FILE_PREFIX, Invocation, MAX_INVOCATION_RETENTION, MIN_INVOCATION_NUM,
     },
-    search_result::SearchResult,
+    model::search_result::SearchResult,
     ui::retsyn_app::PROJECT_DIRS,
 };
 use color_eyre::Result;

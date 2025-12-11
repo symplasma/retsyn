@@ -1,4 +1,4 @@
-use crate::fulltext_index::{IndexStatus, SearchResultsAndErrors};
+use crate::model::fulltext_index::{IndexStatus, SearchResultsAndErrors};
 
 pub(crate) enum IndexResults {
     // TODO change to a proper error type

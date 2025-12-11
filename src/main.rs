@@ -2,7 +2,9 @@ use clap::Parser as _;
 use color_eyre::eyre::{self, Result};
 use directories::ProjectDirs;
 use eframe::egui;
-use retsyn::{cli::Cli, config::Conf, fulltext_index::FulltextIndex, ui::retsyn_app::RetsynApp};
+use retsyn::{
+    cli::Cli, config::Conf, model::fulltext_index::FulltextIndex, ui::retsyn_app::RetsynApp,
+};
 use std::process::exit;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};

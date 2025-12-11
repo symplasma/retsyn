@@ -1,9 +1,7 @@
 pub mod cli;
 pub mod collectors;
 pub mod config;
-pub mod fulltext_index;
-pub mod index_entry;
 pub mod invocations;
 pub mod messages;
-pub mod search_result;
+pub mod model;
 pub mod ui;

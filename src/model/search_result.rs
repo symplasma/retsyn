@@ -10,7 +10,7 @@ use tantivy::{
 use time::{UtcOffset, format_description::well_known::Rfc2822};
 use tracing::{info, warn};
 
-use crate::fulltext_index::FulltextIndex;
+use crate::model::fulltext_index::FulltextIndex;
 
 #[derive(Debug)]
 pub(crate) struct SearchResult {

@@ -3,7 +3,7 @@ use tracing::{debug, warn};
 
 use crate::{
     config::PathList,
-    index_entry::index_entry::{IndexEntry, IndexPath, IndexPathSender},
+    model::index_entry::{IndexEntry, IndexPath, IndexPathSender},
 };
 use std::{
     fs,

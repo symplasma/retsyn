@@ -31,11 +31,11 @@ use crate::{
         web_scrapbook_files::WebScrapbookFiles,
     },
     config::Conf,
-    index_entry::index_entry::{
+    messages::{index_request::IndexRequest, index_results::IndexResults},
+    model::index_entry::{
         IndexEntry, IndexEntrySender, IndexPath, IndexPathReceiver, IndexPathSender,
     },
-    messages::{index_request::IndexRequest, index_results::IndexResults},
-    search_result::SearchResult,
+    model::search_result::SearchResult,
     ui::retsyn_app::PROJECT_DIRS,
 };
 

@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.8 (2025-12-10)
+
+### New Features
+
+ - <csr-id-064f75f74884a14f3eabd12d19b0d087d30e5e31/> Show recent invocations on launch
+ - <csr-id-dc91a3588210087e7deaf7b427355c45c6f9e4f7/> ensure invocations are saved when app exits
+ - <csr-id-51352077d0c8571c428cf7576072479e08aec1fa/> implement IntoIterator for InvocationList to enable iteration
+
+### Refactor
+
+ - <csr-id-5dbb76de5695ff9e0abe5d0c715ff221433b0e1e/> Add UiScreenMode to remove invalid states
+ - <csr-id-db5b0469be4160679f303e7b95867f70d079b6b6/> Combine key and navigation events
+ - <csr-id-839978bcf2dcfe2536f395b1e89163430d69d2fb/> Split out UI methods
+ - <csr-id-79feb32f2e56a1bb3c26445a14f32e0947c190c8/> Move data structures into model
+ - <csr-id-6ce27e6030db585b509065e9c28b93d3c5ba4037/> Reorganize UI code
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 15 commits contributed to the release over the course of 2 calendar days.
+ - 28 days passed between releases.
+ - 8 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Add UiScreenMode to remove invalid states ([`5dbb76d`](https://github.com/symplasma/retsyn/commit/5dbb76de5695ff9e0abe5d0c715ff221433b0e1e))
+    - Combine key and navigation events ([`db5b046`](https://github.com/symplasma/retsyn/commit/db5b0469be4160679f303e7b95867f70d079b6b6))
+    - Split out UI methods ([`839978b`](https://github.com/symplasma/retsyn/commit/839978bcf2dcfe2536f395b1e89163430d69d2fb))
+    - Move data structures into model ([`79feb32`](https://github.com/symplasma/retsyn/commit/79feb32f2e56a1bb3c26445a14f32e0947c190c8))
+    - Reorganize UI code ([`6ce27e6`](https://github.com/symplasma/retsyn/commit/6ce27e6030db585b509065e9c28b93d3c5ba4037))
+    - Show recent invocations on launch ([`064f75f`](https://github.com/symplasma/retsyn/commit/064f75f74884a14f3eabd12d19b0d087d30e5e31))
+    - Add action and query to invocations ([`32ed01a`](https://github.com/symplasma/retsyn/commit/32ed01a592f2a43721b34666c71a37f6f4c8c272))
+    - Add search interface doc ([`b10058b`](https://github.com/symplasma/retsyn/commit/b10058b8a1d383164dc2e415f17b70ff45cf2483))
+    - Record invocations of whole items ([`6027716`](https://github.com/symplasma/retsyn/commit/6027716cc07e91eff0692ae9561fc8eef9ce2136))
+    - Ensure invocations are saved when app exits ([`dc91a35`](https://github.com/symplasma/retsyn/commit/dc91a3588210087e7deaf7b427355c45c6f9e4f7))
+    - Implement IntoIterator for InvocationList to enable iteration ([`5135207`](https://github.com/symplasma/retsyn/commit/51352077d0c8571c428cf7576072479e08aec1fa))
+    - Add invocations ([`42e864d`](https://github.com/symplasma/retsyn/commit/42e864de34c6799e46398d6ac635a1172d84f10c))
+    - Add color_eyre for error handling ([`fa6ca43`](https://github.com/symplasma/retsyn/commit/fa6ca432f747860b983f059c3f5087923c24e2fc))
+    - Add invocations ([`2f76f54`](https://github.com/symplasma/retsyn/commit/2f76f54a1b08c493625a2092270e88413b357829))
+    - Record link clicks in markdown preview ([`8721352`](https://github.com/symplasma/retsyn/commit/8721352fda509a358c5925b77f3fe29f929a6ad4))
+</details>
+
 ## v0.1.7 (2025-11-12)
 
 ### Bug Fixes
@@ -15,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -26,6 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release retsyn v0.1.7 ([`a14891e`](https://github.com/symplasma/retsyn/commit/a14891ed6a47be6731fe689f20662e36ff5e46ee))
     - Selection was stuck on firt item ([`245d9d3`](https://github.com/symplasma/retsyn/commit/245d9d3434dae17c572b7d9b28a09d48f666b317))
 </details>
 

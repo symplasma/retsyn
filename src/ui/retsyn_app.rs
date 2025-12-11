@@ -33,6 +33,15 @@ pub(crate) static PROJECT_DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
     ProjectDirs::from("org", "symplasma", "retsyn").expect("should be able to create project dir")
 });
 
+/// Holds the state of the screen
+///
+/// Using an enum instead of boolean flags makes invalid states unrepresentable.
+pub(crate) enum UiScreenMode {
+    Main,
+    Config,
+    Help,
+}
+
 pub struct RetsynApp {
     egui_ctx: Context,
     pub(crate) search_text: String,
@@ -48,10 +57,10 @@ pub struct RetsynApp {
     pub(crate) invocations: InvocationList,
     pub(crate) scroll_to_selected: bool,
     dark_mode: bool,
+    // Keeping this private to force access through methods
+    ui_screen_mode: UiScreenMode,
     pub(crate) show_snippets: bool,
     pub(crate) show_preview: bool,
-    pub(crate) show_help: bool,
-    pub(crate) show_config: bool,
     pub(crate) config: Conf,
     pub(crate) config_markdown_files: Vec<String>,
     pub(crate) limit_results: usize,
@@ -64,6 +73,22 @@ pub struct RetsynApp {
 }
 
 impl RetsynApp {
+    pub(crate) fn set_ui_screen_mode(&mut self, mode: UiScreenMode) {
+        self.ui_screen_mode = mode;
+    }
+
+    pub(crate) fn ui_screen_mode(&self) -> &UiScreenMode {
+        &self.ui_screen_mode
+    }
+
+    pub(crate) fn show_config(&self) -> bool {
+        matches!(self.ui_screen_mode, UiScreenMode::Config)
+    }
+
+    pub(crate) fn show_help(&self) -> bool {
+        matches!(self.ui_screen_mode, UiScreenMode::Help)
+    }
+
     pub fn new(cc: &CreationContext) -> Self {
         let egui_ctx = cc.egui_ctx.clone();
 
@@ -127,6 +152,13 @@ impl RetsynApp {
             egui::Visuals::light()
         });
 
+        // Drop us into the config screen to create a config if one does not exist
+        let ui_screen_mode = if !config_exists {
+            UiScreenMode::Config
+        } else {
+            UiScreenMode::Main
+        };
+
         Self {
             egui_ctx,
             search_text: String::new(),
@@ -142,10 +174,9 @@ impl RetsynApp {
             invocations: Default::default(),
             scroll_to_selected: false,
             dark_mode,
+            ui_screen_mode,
             show_snippets: true,
             show_preview: true,
-            show_help: false,
-            show_config: !config_exists,
             config,
             config_markdown_files,
             limit_results: 50,

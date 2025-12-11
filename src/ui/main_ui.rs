@@ -5,18 +5,18 @@ use tracing::debug;
 use crate::{
     invocations::{invocation::Action, invocation_list::InvocationList},
     model::fulltext_index::IndexStatus,
-    ui::retsyn_app::RetsynApp,
+    ui::retsyn_app::{RetsynApp, UiScreenMode},
 };
 
 impl RetsynApp {
     pub(crate) fn draw_main_ui(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            if self.show_config {
+            if self.show_config() {
                 self.draw_config_screen(ui);
                 return;
             }
 
-            if self.show_help {
+            if self.show_help() {
                 self.draw_help_screen(ui);
                 return;
             }
@@ -122,7 +122,7 @@ impl RetsynApp {
                                 )
                                 .clicked()
                             {
-                                self.show_help = true;
+                                self.set_ui_screen_mode(UiScreenMode::Help);
                             };
                         },
                     );

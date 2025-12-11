@@ -1,11 +1,15 @@
-use crate::ui::retsyn_app::RetsynApp;
+use crate::ui::retsyn_app::{RetsynApp, UiScreenMode};
 
 impl RetsynApp {
     pub(crate) fn handle_key_events_and_navigation(&mut self, ctx: &egui::Context) {
         // Toggle config screen with Ctrl+,
         if ctx.input(|i| i.key_pressed(egui::Key::Comma) && i.modifiers.ctrl) {
-            self.show_config = !self.show_config;
-            self.show_help = false;
+            let mode = if self.show_config() {
+                UiScreenMode::Main
+            } else {
+                UiScreenMode::Config
+            };
+            self.set_ui_screen_mode(mode);
             return;
         }
 
@@ -14,8 +18,12 @@ impl RetsynApp {
             (i.key_pressed(egui::Key::H) && i.modifiers.ctrl)
                 || (i.key_pressed(egui::Key::Questionmark) && i.modifiers.ctrl)
         }) {
-            self.show_help = !self.show_help;
-            self.show_config = false;
+            let mode = if self.show_help() {
+                UiScreenMode::Main
+            } else {
+                UiScreenMode::Help
+            };
+            self.set_ui_screen_mode(mode);
             return;
         }
 
@@ -25,20 +33,12 @@ impl RetsynApp {
             return;
         }
 
-        // If config screen is showing, Escape closes it (only if index exists)
-        if self.show_config {
-            if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
-                self.show_config = false;
+        // Return to main screen via escape if we're on any other screen
+        if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            if !matches!(self.ui_screen_mode(), UiScreenMode::Main) {
+                self.set_ui_screen_mode(UiScreenMode::Main);
+                return;
             }
-            return;
-        }
-
-        // If help screen is showing, Escape closes it
-        if self.show_help {
-            if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
-                self.show_help = false;
-            }
-            return;
         }
 
         if ctx.input(|i| i.key_pressed(egui::Key::U) && i.modifiers.ctrl)

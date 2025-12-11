@@ -316,8 +316,7 @@ impl Drop for RetsynApp {
 impl eframe::App for RetsynApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // handling key events here to stay responsive
-        self.handle_key_events(ctx);
-        self.handle_navigation(ctx);
+        self.handle_key_events_and_navigation(ctx);
 
         if let Some(last_time) = self.last_input_time
             && last_time.elapsed() >= self.debounce_duration

@@ -9,7 +9,7 @@ use std::{
 use time::{OffsetDateTime, format_description};
 
 use crate::invocations::invocation_list::InvocationList;
-use crate::retsyn_app::PROJECT_DIRS;
+use crate::ui::retsyn_app::PROJECT_DIRS;
 
 /// The minimum number of invocations to load for frecency calculations
 pub(crate) const MIN_INVOCATION_NUM: usize = 1000;

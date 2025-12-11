@@ -35,8 +35,8 @@ use crate::{
         IndexEntry, IndexEntrySender, IndexPath, IndexPathReceiver, IndexPathSender,
     },
     messages::{index_request::IndexRequest, index_results::IndexResults},
-    retsyn_app::PROJECT_DIRS,
     search_result::SearchResult,
+    ui::retsyn_app::PROJECT_DIRS,
 };
 
 pub(crate) static INDEX_PATH: LazyLock<PathBuf> =

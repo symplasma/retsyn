@@ -5,6 +5,8 @@ use std::io;
 use std::path::PathBuf;
 use tracing::info;
 
+use crate::ui::retsyn_app::PROJECT_DIRS;
+
 pub(crate) type PathList = Vec<PathBuf>;
 
 #[derive(Config, Clone)]
@@ -23,7 +25,6 @@ pub struct Conf {
 impl Conf {
     /// Get the default config file path
     pub fn config_path() -> PathBuf {
-        use crate::retsyn_app::PROJECT_DIRS;
         PROJECT_DIRS.config_dir().to_path_buf().join("retsyn.toml")
     }
 
